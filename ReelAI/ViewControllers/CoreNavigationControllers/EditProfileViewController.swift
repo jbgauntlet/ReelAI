@@ -195,6 +195,9 @@ class EditProfileViewController: UIViewController {
     private func fetchUserData() {
         guard let userId = Auth.auth().currentUser?.uid else { return }
         
+        // Clear existing stack view items
+        stackView.arrangedSubviews.forEach { $0.removeFromSuperview() }
+        
         let db = Firestore.firestore()
         db.collection("users").document(userId).getDocument { [weak self] snapshot, error in
             guard let self = self,

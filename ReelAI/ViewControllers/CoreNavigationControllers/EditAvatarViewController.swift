@@ -11,6 +11,8 @@ class EditAvatarViewController: UIViewController {
     private var completion: ((Bool) -> Void)?
     private var assets: PHFetchResult<PHAsset>?
     private var selectedAssets: Set<String> = []
+    private var albums: PHFetchResult<PHAssetCollection>?
+    private var selectedAlbum: PHAssetCollection?
     
     // MARK: - UI Components
     private let filterButton: UIButton = {
@@ -37,18 +39,6 @@ class EditAvatarViewController: UIViewController {
         cv.register(CameraCell.self, forCellWithReuseIdentifier: "CameraCell")
         cv.translatesAutoresizingMaskIntoConstraints = false
         return cv
-    }()
-    
-    private let selectMultipleButton: UIButton = {
-        let button = UIButton(type: .system)
-        button.setTitle("Select multiple", for: .normal)
-        button.setImage(UIImage(systemName: "circle"), for: .normal)
-        button.tintColor = .white
-        button.titleLabel?.font = .systemFont(ofSize: 16, weight: .medium)
-        button.backgroundColor = UIColor(white: 0.2, alpha: 0.8)
-        button.contentEdgeInsets = UIEdgeInsets(top: 10, left: 20, bottom: 10, right: 20)
-        button.translatesAutoresizingMaskIntoConstraints = false
-        return button
     }()
     
     // MARK: - Lifecycle
@@ -83,7 +73,6 @@ class EditAvatarViewController: UIViewController {
         // Add subviews
         view.addSubview(filterButton)
         view.addSubview(collectionView)
-        view.addSubview(selectMultipleButton)
         
         // Setup delegates
         collectionView.delegate = self
@@ -97,15 +86,11 @@ class EditAvatarViewController: UIViewController {
             collectionView.topAnchor.constraint(equalTo: filterButton.bottomAnchor, constant: 10),
             collectionView.leadingAnchor.constraint(equalTo: view.leadingAnchor),
             collectionView.trailingAnchor.constraint(equalTo: view.trailingAnchor),
-            collectionView.bottomAnchor.constraint(equalTo: selectMultipleButton.topAnchor),
-            
-            selectMultipleButton.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: 20),
-            selectMultipleButton.bottomAnchor.constraint(equalTo: view.safeAreaLayoutGuide.bottomAnchor, constant: -10)
+            collectionView.bottomAnchor.constraint(equalTo: view.bottomAnchor)
         ])
         
         // Add targets
         filterButton.addTarget(self, action: #selector(handleFilterTap), for: .touchUpInside)
-        selectMultipleButton.addTarget(self, action: #selector(handleSelectMultipleTap), for: .touchUpInside)
     }
     
     // MARK: - Photo Library
@@ -113,17 +98,31 @@ class EditAvatarViewController: UIViewController {
         PHPhotoLibrary.requestAuthorization { [weak self] status in
             DispatchQueue.main.async {
                 if status == .authorized {
+                    self?.fetchAlbums()
                     self?.fetchPhotos()
                 }
             }
         }
     }
     
-    private func fetchPhotos() {
+    private func fetchPhotos(in collection: PHAssetCollection? = nil) {
         let options = PHFetchOptions()
         options.sortDescriptors = [NSSortDescriptor(key: "creationDate", ascending: false)]
-        assets = PHAsset.fetchAssets(with: .image, options: options)
+        
+        if let collection = collection {
+            assets = PHAsset.fetchAssets(in: collection, options: options)
+            filterButton.setTitle(collection.localizedTitle ?? "All", for: .normal)
+        } else {
+            assets = PHAsset.fetchAssets(with: .image, options: options)
+            filterButton.setTitle("All", for: .normal)
+        }
         collectionView.reloadData()
+    }
+    
+    private func fetchAlbums() {
+        let options = PHFetchOptions()
+        options.sortDescriptors = [NSSortDescriptor(key: "localizedTitle", ascending: true)]
+        albums = PHAssetCollection.fetchAssetCollections(with: .album, subtype: .any, options: options)
     }
     
     // MARK: - Actions
@@ -134,11 +133,35 @@ class EditAvatarViewController: UIViewController {
     }
     
     @objc private func handleFilterTap() {
-        // TODO: Show filter options
-    }
-    
-    @objc private func handleSelectMultipleTap() {
-        // TODO: Toggle multiple selection mode
+        let alertController = UIAlertController(title: nil, message: nil, preferredStyle: .actionSheet)
+        
+        // Add "All Photos" option
+        alertController.addAction(UIAlertAction(title: "All Photos", style: .default) { [weak self] _ in
+            self?.selectedAlbum = nil
+            self?.fetchPhotos()
+        })
+        
+        // Add album options
+        if let albums = albums {
+            for i in 0..<albums.count {
+                let album = albums.object(at: i)
+                alertController.addAction(UIAlertAction(title: album.localizedTitle, style: .default) { [weak self] _ in
+                    self?.selectedAlbum = album
+                    self?.fetchPhotos(in: album)
+                })
+            }
+        }
+        
+        // Add cancel option
+        alertController.addAction(UIAlertAction(title: "Cancel", style: .cancel))
+        
+        // For iPad support
+        if let popoverController = alertController.popoverPresentationController {
+            popoverController.sourceView = filterButton
+            popoverController.sourceRect = filterButton.bounds
+        }
+        
+        present(alertController, animated: true)
     }
     
     private func uploadImage(_ image: UIImage) {

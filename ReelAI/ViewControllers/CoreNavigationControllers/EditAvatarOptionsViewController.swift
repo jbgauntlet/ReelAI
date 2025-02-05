@@ -92,7 +92,7 @@ class EditAvatarOptionsViewController: UIViewController {
         
         stackView.addArrangedSubview(button)
         
-        if stackView.arrangedSubviews.count < 4 {
+        if stackView.arrangedSubviews.count < 3 {
             let separator = UIView()
             separator.backgroundColor = .separator
             separator.heightAnchor.constraint(equalToConstant: 0.5).isActive = true
