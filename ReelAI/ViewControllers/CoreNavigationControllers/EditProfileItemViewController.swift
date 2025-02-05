@@ -9,50 +9,11 @@ import UIKit
 import FirebaseAuth
 import FirebaseFirestore
 
+protocol EditProfileItemViewControllerDelegate: AnyObject {
+    func editProfileItemViewController(_ controller: EditProfileItemViewController, didUpdateField fieldType: FieldType, value: String)
+}
+
 class EditProfileItemViewController: UIViewController {
-    
-    enum FieldType: Int {
-        case name = 0
-        case username = 1
-        case bio = 2
-        case links = 3
-        
-        var title: String {
-            switch self {
-            case .name: return "Name"
-            case .username: return "Username"
-            case .bio: return "Bio"
-            case .links: return "Links"
-            }
-        }
-        
-        var placeholder: String {
-            switch self {
-            case .name: return "Enter your name"
-            case .username: return "Enter username"
-            case .bio: return "Write a bio"
-            case .links: return "Add links"
-            }
-        }
-        
-        var characterLimit: Int? {
-            switch self {
-            case .name: return 50
-            case .username: return 30
-            case .bio: return 150
-            case .links: return nil
-            }
-        }
-        
-        var helpText: String? {
-            switch self {
-            case .name: return "Your name will be visible to other users"
-            case .username: return "Username must be unique and contain only letters, numbers, and underscores"
-            case .bio: return "Tell others about yourself"
-            case .links: return "Add links to your social media profiles"
-            }
-        }
-    }
     
     // MARK: - Properties
     private let fieldType: FieldType
@@ -63,6 +24,9 @@ class EditProfileItemViewController: UIViewController {
             saveButton.tintColor = hasChanges ? .systemRed : .systemRed.withAlphaComponent(0.5)
         }
     }
+    
+    // Add delegate property
+    weak var delegate: EditProfileItemViewControllerDelegate?
     
     // MARK: - UI Components
     private let fieldNameLabel: UILabel = {
@@ -237,12 +201,17 @@ class EditProfileItemViewController: UIViewController {
         case .links: field = "links"
         }
         
-        userRef.updateData([field: inputField.text]) { [weak self] error in
+        let value = inputField.text ?? ""
+        userRef.updateData([field: value]) { [weak self] error in
+            guard let self = self else { return }
+            
             if let error = error {
                 print("Error updating \(field): \(error)")
                 // TODO: Show error alert
             } else {
-                self?.navigationController?.popViewController(animated: true)
+                // Notify delegate before dismissing
+                self.delegate?.editProfileItemViewController(self, didUpdateField: self.fieldType, value: value)
+                self.navigationController?.popViewController(animated: true)
             }
         }
     }

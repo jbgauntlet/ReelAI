@@ -203,6 +203,9 @@ class EditProfileViewController: UIViewController {
             guard let self = self,
                   let data = snapshot?.data() else { return }
             
+            // Store user data using the correct constructor
+            self.user = User(from: data, uid: userId)
+            
             // Update UI with user data
             if let username = data["username"] as? String {
                 self.stackView.addArrangedSubview(self.createInfoRow(label: "Username", value: username))
@@ -313,29 +316,27 @@ class EditProfileViewController: UIViewController {
     }
     
     @objc private func handleRowTap(_ sender: UITapGestureRecognizer) {
-        guard let container = sender.view else { return }
-        guard let titleLabel = container.subviews.first(where: { $0 is UILabel }) as? UILabel else { return }
-        
-        // Get the field type from the chevron button's tag
-        guard let chevronButton = container.subviews.first(where: { ($0 as? UIButton)?.currentImage == UIImage(systemName: "chevron.right") }) as? UIButton,
-              let fieldType = EditProfileItemViewController.FieldType(rawValue: chevronButton.tag) else { return }
+        guard let container = sender.view,
+              let chevronButton = container.subviews.first(where: { ($0 as? UIButton)?.currentImage == UIImage(systemName: "chevron.right") }) as? UIButton,
+              let fieldType = FieldType(rawValue: chevronButton.tag) else { return }
         
         let value = (container.subviews.first { ($0 as? UILabel)?.textAlignment == .right } as? UILabel)?.text ?? ""
         navigateToEditItem(fieldType: fieldType, currentValue: value)
     }
     
     private func navigateToEditItem(for tag: Int) {
-        guard let fieldType = EditProfileItemViewController.FieldType(rawValue: tag) else { return }
+        guard let fieldType = FieldType(rawValue: tag) else { return }
         let value = getFieldValue(for: fieldType)
         navigateToEditItem(fieldType: fieldType, currentValue: value)
     }
     
-    private func navigateToEditItem(fieldType: EditProfileItemViewController.FieldType, currentValue: String) {
+    private func navigateToEditItem(fieldType: FieldType, currentValue: String) {
         let editItemVC = EditProfileItemViewController(fieldType: fieldType, currentValue: currentValue)
+        editItemVC.delegate = self
         navigationController?.pushViewController(editItemVC, animated: true)
     }
     
-    private func getFieldValue(for fieldType: EditProfileItemViewController.FieldType) -> String {
+    private func getFieldValue(for fieldType: FieldType) -> String {
         guard let data = user else { return "" }
         
         switch fieldType {
@@ -404,5 +405,13 @@ extension EditProfileViewController: UIImagePickerControllerDelegate, UINavigati
     
     func imagePickerControllerDidCancel(_ picker: UIImagePickerController) {
         picker.dismiss(animated: true)
+    }
+}
+
+// Add EditProfileItemViewControllerDelegate
+extension EditProfileViewController: EditProfileItemViewControllerDelegate {
+    func editProfileItemViewController(_ controller: EditProfileItemViewController, didUpdateField fieldType: FieldType, value: String) {
+        // Refresh data after update
+        fetchUserData()
     }
 } 
