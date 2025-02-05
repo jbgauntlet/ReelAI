@@ -22,6 +22,14 @@ class PublicProfileViewController: UIViewController {
         return view
     }()
     
+    private let backButton: UIButton = {
+        let button = UIButton(type: .system)
+        button.setImage(UIImage(systemName: "arrow.left"), for: .normal)
+        button.tintColor = .black
+        button.translatesAutoresizingMaskIntoConstraints = false
+        return button
+    }()
+    
     private let avatarImageView: UIImageView = {
         let iv = UIImageView()
         iv.backgroundColor = .systemGray5
@@ -120,9 +128,9 @@ class PublicProfileViewController: UIViewController {
     // MARK: - Setup
     private func setupUI() {
         view.backgroundColor = .systemBackground
-        navigationItem.largeTitleDisplayMode = .never
         
         view.addSubview(headerView)
+        headerView.addSubview(backButton)
         headerView.addSubview(avatarImageView)
         headerView.addSubview(usernameLabel)
         headerView.addSubview(statsStackView)
@@ -141,6 +149,11 @@ class PublicProfileViewController: UIViewController {
             headerView.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor),
             headerView.leadingAnchor.constraint(equalTo: view.leadingAnchor),
             headerView.trailingAnchor.constraint(equalTo: view.trailingAnchor),
+            
+            backButton.topAnchor.constraint(equalTo: headerView.topAnchor, constant: 20),
+            backButton.leadingAnchor.constraint(equalTo: headerView.leadingAnchor, constant: 16),
+            backButton.widthAnchor.constraint(equalToConstant: 44),
+            backButton.heightAnchor.constraint(equalToConstant: 44),
             
             avatarImageView.topAnchor.constraint(equalTo: headerView.topAnchor, constant: 20),
             avatarImageView.centerXAnchor.constraint(equalTo: headerView.centerXAnchor),
@@ -173,6 +186,7 @@ class PublicProfileViewController: UIViewController {
         ])
         
         followButton.addTarget(self, action: #selector(handleFollowTap), for: .touchUpInside)
+        backButton.addTarget(self, action: #selector(handleBack), for: .touchUpInside)
     }
     
     private func setupCollectionView() {
@@ -428,6 +442,10 @@ class PublicProfileViewController: UIViewController {
                 }
             }
         }
+    }
+    
+    @objc private func handleBack() {
+        navigationController?.popViewController(animated: true)
     }
     
     deinit {
