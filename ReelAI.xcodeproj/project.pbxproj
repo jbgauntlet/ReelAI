@@ -36,6 +36,8 @@
 		04FB121C2C70C65E00A1C209 /* CustomView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 04FB121B2C70C65E00A1C209 /* CustomView.swift */; };
 		04FB122A2C70F13A00A1C209 /* SignInViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 04FB12292C70F13A00A1C209 /* SignInViewController.swift */; };
 		04FB122C2C716D9700A1C209 /* HorizontalCoverTransition.swift in Sources */ = {isa = PBXBuildFile; fileRef = 04FB122B2C716D9700A1C209 /* HorizontalCoverTransition.swift */; };
+		6F216C312D53BE37000ED151 /* EditAvatarViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6F216C302D53BE37000ED151 /* EditAvatarViewController.swift */; };
+		6F216C332D53D097000ED151 /* EditAvatarOptionsViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6F216C322D53D097000ED151 /* EditAvatarOptionsViewController.swift */; };
 		6FC41CA52D512CD7003849BC /* User.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6FC41CA42D512CD7003849BC /* User.swift */; };
 		6FC41CB42D5144DF003849BC /* GoogleService-Info.plist in Resources */ = {isa = PBXBuildFile; fileRef = 6FC41CB32D5144DF003849BC /* GoogleService-Info.plist */; };
 		6FC41CB72D5146DF003849BC /* FirebaseAnalytics in Frameworks */ = {isa = PBXBuildFile; productRef = 6FC41CB62D5146DF003849BC /* FirebaseAnalytics */; };
@@ -103,6 +105,8 @@
 		04FB121B2C70C65E00A1C209 /* CustomView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CustomView.swift; sourceTree = "<group>"; };
 		04FB12292C70F13A00A1C209 /* SignInViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SignInViewController.swift; sourceTree = "<group>"; };
 		04FB122B2C716D9700A1C209 /* HorizontalCoverTransition.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HorizontalCoverTransition.swift; sourceTree = "<group>"; };
+		6F216C302D53BE37000ED151 /* EditAvatarViewController.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = EditAvatarViewController.swift; sourceTree = "<group>"; };
+		6F216C322D53D097000ED151 /* EditAvatarOptionsViewController.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = EditAvatarOptionsViewController.swift; sourceTree = "<group>"; };
 		6FC41CA42D512CD7003849BC /* User.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = User.swift; sourceTree = "<group>"; };
 		6FC41CB32D5144DF003849BC /* GoogleService-Info.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; path = "GoogleService-Info.plist"; sourceTree = "<group>"; };
 		6FC69C7A2D5205830020CF09 /* Video.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; name = Video.swift; path = ReelAI/Models/Video.swift; sourceTree = SOURCE_ROOT; };
@@ -270,6 +274,8 @@
 		04FB120C2C70832B00A1C209 /* CoreNavigationControllers */ = {
 			isa = PBXGroup;
 			children = (
+				6F216C302D53BE37000ED151 /* EditAvatarViewController.swift */,
+				6F216C322D53D097000ED151 /* EditAvatarOptionsViewController.swift */,
 				6FC69C802D526DFE0020CF09 /* EditProfileViewController.swift */,
 				042273212C58590100A92F9A /* UploadViewController.swift */,
 				042273262C58590100A92F9A /* VideoScrollContentViewController.swift */,
@@ -419,6 +425,7 @@
 				6FC69C7B2D5205830020CF09 /* Video.swift in Sources */,
 				042273672C5D68F100A92F9A /* GlobalDataManager.swift in Sources */,
 				04FB120B2C7081DC00A1C209 /* FriendsViewController.swift in Sources */,
+				6F216C332D53D097000ED151 /* EditAvatarOptionsViewController.swift in Sources */,
 				042273342C58595F00A92F9A /* SplashScreenViewController.swift in Sources */,
 				6FC41CA52D512CD7003849BC /* User.swift in Sources */,
 				04FB122C2C716D9700A1C209 /* HorizontalCoverTransition.swift in Sources */,
@@ -428,6 +435,7 @@
 				0422732B2C58590100A92F9A /* MainTabBarController.swift in Sources */,
 				04D47C9C2CA538DE00D5DB43 /* SignUpViewController.swift in Sources */,
 				045B7C322C74A3C700AD5FF7 /* KeychainUtils.swift in Sources */,
+				6F216C312D53BE37000ED151 /* EditAvatarViewController.swift in Sources */,
 				042272F62C58573C00A92F9A /* AppDelegate.swift in Sources */,
 				04FB122A2C70F13A00A1C209 /* SignInViewController.swift in Sources */,
 				6FC69C8A2D52AA1C0020CF09 /* Comment.swift in Sources */,

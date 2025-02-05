@@ -1,6 +1,7 @@
 import UIKit
 import FirebaseAuth
 import FirebaseFirestore
+import FirebaseStorage
 
 class EditProfileViewController: UIViewController {
     
@@ -205,7 +206,19 @@ class EditProfileViewController: UIViewController {
                 
                 if let avatarUrl = data["avatar"] as? String,
                    let url = URL(string: avatarUrl) {
-                    // TODO: Load avatar image from URL
+                    // Load avatar image from URL
+                    URLSession.shared.dataTask(with: url) { data, response, error in
+                        if let error = error {
+                            print("Error loading avatar: \(error.localizedDescription)")
+                            return
+                        }
+                        
+                        if let data = data, let image = UIImage(data: data) {
+                            DispatchQueue.main.async {
+                                self.avatarImageView.image = image
+                            }
+                        }
+                    }.resume()
                 } else {
                     self.setupDefaultAvatar(with: username)
                 }
@@ -233,7 +246,63 @@ class EditProfileViewController: UIViewController {
     }
     
     @objc private func handleAvatarTap() {
-        // TODO: Implement avatar change functionality
+        let optionsVC = EditAvatarOptionsViewController { [weak self] (option: EditAvatarOptionsViewController.AvatarOption) in
+            guard let self = self else { return }
+            
+            switch option {
+            case .takePhoto:
+                let picker = UIImagePickerController()
+                picker.sourceType = .camera
+                picker.delegate = self
+                self.present(picker, animated: true)
+                
+            case .uploadPhoto:
+                let editAvatarVC = EditAvatarViewController { [weak self] success in
+                    if success {
+                        self?.fetchUserData()
+                    }
+                }
+                let nav = UINavigationController(rootViewController: editAvatarVC)
+                nav.modalPresentationStyle = .fullScreen
+                self.present(nav, animated: true)
+                
+            case .viewPhoto:
+                if let image = self.avatarImageView.image {
+                    let imageVC = UIViewController()
+                    imageVC.view.backgroundColor = .black
+                    
+                    let imageView = UIImageView(image: image)
+                    imageView.contentMode = .scaleAspectFit
+                    imageView.translatesAutoresizingMaskIntoConstraints = false
+                    imageVC.view.addSubview(imageView)
+                    
+                    // Add back button
+                    let backButton = UIButton(type: .system)
+                    backButton.setImage(UIImage(systemName: "xmark"), for: .normal)
+                    backButton.tintColor = .white
+                    backButton.translatesAutoresizingMaskIntoConstraints = false
+                    backButton.addTarget(self, action: #selector(dismissImageViewer), for: .touchUpInside)
+                    imageVC.view.addSubview(backButton)
+                    
+                    NSLayoutConstraint.activate([
+                        imageView.topAnchor.constraint(equalTo: imageVC.view.topAnchor),
+                        imageView.leadingAnchor.constraint(equalTo: imageVC.view.leadingAnchor),
+                        imageView.trailingAnchor.constraint(equalTo: imageVC.view.trailingAnchor),
+                        imageView.bottomAnchor.constraint(equalTo: imageVC.view.bottomAnchor),
+                        
+                        backButton.topAnchor.constraint(equalTo: imageVC.view.safeAreaLayoutGuide.topAnchor, constant: 16),
+                        backButton.leadingAnchor.constraint(equalTo: imageVC.view.leadingAnchor, constant: 16),
+                        backButton.widthAnchor.constraint(equalToConstant: 44),
+                        backButton.heightAnchor.constraint(equalToConstant: 44)
+                    ])
+                    
+                    imageVC.modalPresentationStyle = .fullScreen
+                    self.present(imageVC, animated: true)
+                }
+            }
+        }
+        
+        present(optionsVC, animated: true)
     }
     
     @objc private func handleChevronTap(_ sender: UIButton) {
@@ -272,5 +341,65 @@ class EditProfileViewController: UIViewController {
         case .bio: return data.bio ?? ""
         case .links: return data.links?.first ?? ""
         }
+    }
+    
+    @objc private func dismissImageViewer() {
+        dismiss(animated: true)
+    }
+}
+
+// MARK: - UIImagePickerControllerDelegate
+extension EditProfileViewController: UIImagePickerControllerDelegate, UINavigationControllerDelegate {
+    func imagePickerController(_ picker: UIImagePickerController, didFinishPickingMediaWithInfo info: [UIImagePickerController.InfoKey : Any]) {
+        picker.dismiss(animated: true)
+        
+        guard let image = info[.originalImage] as? UIImage else { return }
+        
+        // Upload the image
+        guard let userId = Auth.auth().currentUser?.uid,
+              let imageData = image.jpegData(compressionQuality: 0.5) else { return }
+        
+        let storageRef = Storage.storage().reference()
+        let avatarRef = storageRef.child("avatars/\(userId)")
+        
+        let metadata = StorageMetadata()
+        metadata.contentType = "image/jpeg"
+        
+        avatarRef.putData(imageData, metadata: metadata) { [weak self] metadata, error in
+            guard let self = self else { return }
+            
+            if let error = error {
+                print("Error uploading avatar: \(error.localizedDescription)")
+                return
+            }
+            
+            avatarRef.downloadURL { url, error in
+                if let error = error {
+                    print("Error getting download URL: \(error.localizedDescription)")
+                    return
+                }
+                
+                guard let downloadURL = url else { return }
+                
+                // Update Firestore with the new avatar URL
+                let db = Firestore.firestore()
+                db.collection("users").document(userId).updateData([
+                    "avatar": downloadURL.absoluteString
+                ]) { [weak self] error in
+                    if let error = error {
+                        print("Error updating user avatar: \(error.localizedDescription)")
+                        return
+                    }
+                    
+                    DispatchQueue.main.async {
+                        self?.fetchUserData()
+                    }
+                }
+            }
+        }
+    }
+    
+    func imagePickerControllerDidCancel(_ picker: UIImagePickerController) {
+        picker.dismiss(animated: true)
     }
 } 

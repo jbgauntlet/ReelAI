@@ -2,6 +2,10 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
+	<key>NSCameraUsageDescription</key>
+	<string>ReelAI needs camera access to let you take profile pictures</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>ReelAI needs access to your photos to let you select a profile picture</string>
 	<key>UIAppFonts</key>
 	<array>
 		<string>Inter-VariableFont_opsz,wght.ttf</string>
