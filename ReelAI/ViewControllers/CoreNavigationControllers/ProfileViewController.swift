@@ -311,10 +311,37 @@ class ProfileViewController: UIViewController {
                     self.addBioButton.isHidden = false
                 }
                 
+                // Handle avatar image
                 if let avatarUrl = data["avatar"] as? String,
                    let url = URL(string: avatarUrl) {
-                    // TODO: Load avatar image
+                    // Create a URLSession data task to fetch the image
+                    URLSession.shared.dataTask(with: url) { [weak self] data, response, error in
+                        if let error = error {
+                            print("Error loading avatar: \(error.localizedDescription)")
+                            // Fall back to default avatar on error
+                            DispatchQueue.main.async {
+                                self?.setupDefaultAvatar(with: username)
+                            }
+                            return
+                        }
+                        
+                        if let data = data,
+                           let image = UIImage(data: data) {
+                            DispatchQueue.main.async {
+                                // Clear any existing subviews (like default avatar label)
+                                self?.avatarImageView.subviews.forEach { $0.removeFromSuperview() }
+                                self?.avatarImageView.backgroundColor = .clear
+                                self?.avatarImageView.image = image
+                            }
+                        } else {
+                            // Fall back to default avatar if image data is invalid
+                            DispatchQueue.main.async {
+                                self?.setupDefaultAvatar(with: username)
+                            }
+                        }
+                    }.resume()
                 } else {
+                    // No avatar URL, use default avatar
                     self.setupDefaultAvatar(with: username)
                 }
             }
