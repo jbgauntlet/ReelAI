@@ -478,12 +478,12 @@ class ConnectionUserCell: UITableViewCell {
     
     // MARK: - UI Components
     private let profileImageView: UIImageView = {
-        let imageView = UIImageView()
-        imageView.contentMode = .scaleAspectFill
-        imageView.clipsToBounds = true
-        imageView.layer.cornerRadius = 25
-        imageView.backgroundColor = .lightGray // Placeholder
-        return imageView
+        let iv = UIImageView()
+        iv.contentMode = .scaleAspectFill
+        iv.clipsToBounds = true
+        iv.layer.cornerRadius = 25
+        iv.backgroundColor = .systemGray5
+        return iv
     }()
     
     private let displayNameLabel: UILabel = {
@@ -561,10 +561,76 @@ class ConnectionUserCell: UITableViewCell {
         // Update button state
         updateButtonState(isFollowing: isFollowing)
         
-        if let avatarURL = user.avatar {
-            // TODO: Load avatar image using your image loading system
-            profileImageView.backgroundColor = .lightGray
+        // Handle avatar image
+        if let username = user.username {
+            if let avatarUrl = user.avatar,
+               let url = URL(string: avatarUrl) {
+                // Create a URLSession data task to fetch the image
+                URLSession.shared.dataTask(with: url) { [weak self] data, response, error in
+                    if let error = error {
+                        print("Error loading avatar: \(error.localizedDescription)")
+                        // Fall back to default avatar on error
+                        DispatchQueue.main.async {
+                            self?.setupDefaultAvatar(with: username)
+                        }
+                        return
+                    }
+                    
+                    if let data = data,
+                       let image = UIImage(data: data) {
+                        DispatchQueue.main.async {
+                            // Clear any existing subviews (like default avatar label)
+                            self?.profileImageView.subviews.forEach { $0.removeFromSuperview() }
+                            self?.profileImageView.backgroundColor = .clear
+                            self?.profileImageView.image = image
+                        }
+                    } else {
+                        // Fall back to default avatar if image data is invalid
+                        DispatchQueue.main.async {
+                            self?.setupDefaultAvatar(with: username)
+                        }
+                    }
+                }.resume()
+            } else {
+                // No avatar URL, use default avatar
+                setupDefaultAvatar(with: username)
+            }
         }
+    }
+    
+    private func setupDefaultAvatar(with username: String) {
+        // Clear any existing content
+        profileImageView.image = nil
+        profileImageView.subviews.forEach { $0.removeFromSuperview() }
+        
+        let firstChar = String(username.prefix(1)).uppercased()
+        
+        // Generate random color
+        let hue = CGFloat(username.hashValue) / CGFloat(Int.max)
+        let color = UIColor(hue: hue, saturation: 0.5, brightness: 0.8, alpha: 1.0)
+        
+        profileImageView.backgroundColor = color
+        
+        // Create label for initials
+        let label = UILabel()
+        label.text = firstChar
+        label.font = .systemFont(ofSize: 20, weight: .medium)
+        label.textColor = .white
+        label.translatesAutoresizingMaskIntoConstraints = false
+        
+        profileImageView.addSubview(label)
+        NSLayoutConstraint.activate([
+            label.centerXAnchor.constraint(equalTo: profileImageView.centerXAnchor),
+            label.centerYAnchor.constraint(equalTo: profileImageView.centerYAnchor)
+        ])
+    }
+    
+    override func prepareForReuse() {
+        super.prepareForReuse()
+        profileImageView.image = nil
+        profileImageView.subviews.forEach { $0.removeFromSuperview() }
+        displayNameLabel.text = nil
+        usernameLabel.text = nil
     }
     
     private func updateButtonState(isFollowing: Bool) {

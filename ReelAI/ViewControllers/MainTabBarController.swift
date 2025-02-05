@@ -23,7 +23,7 @@ class MainTabBarController: UIViewController {
         let homeVC = UINavigationController(rootViewController: HomeViewController())
         homeVC.tabBarItem = UITabBarItem(title: "Home", image: UIImage(systemName: "house"), tag: 0)
         
-        let friendsVC = UINavigationController(rootViewController: FriendsViewController())
+        let friendsVC = UINavigationController(rootViewController: ProfileListsViewController())
         friendsVC.tabBarItem = UITabBarItem(title: "Friends", image: UIImage(systemName: "person.2"), tag: 1)
         
         let videoFeedVC = UINavigationController(rootViewController: VideoScrollContentViewController())
