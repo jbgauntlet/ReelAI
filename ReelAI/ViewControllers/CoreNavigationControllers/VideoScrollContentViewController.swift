@@ -118,6 +118,8 @@ class FullScreenVideoCell: UICollectionViewCell {
         button.backgroundColor = .clear
         button.layer.cornerRadius = 25
         button.clipsToBounds = true
+        button.imageView?.contentMode = .scaleAspectFill
+        button.contentMode = .scaleAspectFill
         button.translatesAutoresizingMaskIntoConstraints = false
         return button
     }()
@@ -503,8 +505,43 @@ class FullScreenVideoCell: UICollectionViewCell {
             
             if let avatarUrl = data["avatar"] as? String,
                let url = URL(string: avatarUrl) {
-                // TODO: Load avatar image from URL
+                // Create a URLSession data task to fetch the image
+                URLSession.shared.dataTask(with: url) { [weak self] data, response, error in
+                    if let error = error {
+                        print("Error loading avatar: \(error.localizedDescription)")
+                        // Fall back to default avatar on error
+                        DispatchQueue.main.async {
+                            self?.setupDefaultAvatar(with: username)
+                        }
+                        return
+                    }
+                    
+                    if let data = data,
+                       let image = UIImage(data: data) {
+                        DispatchQueue.main.async {
+                            // Clear any existing content
+                            self?.creatorAvatarButton.subviews.forEach { $0.removeFromSuperview() }
+                            self?.creatorAvatarButton.backgroundColor = .clear
+                            
+                            // Create a new UIImageView with the correct size and configuration
+                            let imageView = UIImageView(frame: self?.creatorAvatarButton.bounds ?? .zero)
+                            imageView.contentMode = .scaleAspectFill
+                            imageView.clipsToBounds = true
+                            imageView.image = image
+                            imageView.autoresizingMask = [.flexibleWidth, .flexibleHeight]
+                            
+                            // Add the image view to the button
+                            self?.creatorAvatarButton.addSubview(imageView)
+                        }
+                    } else {
+                        // Fall back to default avatar if image data is invalid
+                        DispatchQueue.main.async {
+                            self?.setupDefaultAvatar(with: username)
+                        }
+                    }
+                }.resume()
             } else {
+                // No avatar URL, use default avatar
                 self.setupDefaultAvatar(with: username)
             }
         }
@@ -621,22 +658,26 @@ class FullScreenVideoCell: UICollectionViewCell {
     }
     
     private func setupDefaultAvatar(with username: String) {
-        let firstChar = String(username.prefix(1)).uppercased()
+        // Clear any existing content
+        creatorAvatarButton.setImage(nil, for: .normal)
+        creatorAvatarButton.subviews.forEach { $0.removeFromSuperview() }
         
-        // Generate random color
-        let hue = CGFloat(username.hashValue) / CGFloat(Int.max)
-        let color = UIColor(hue: hue, saturation: 0.5, brightness: 0.8, alpha: 1.0)
-        
-        creatorAvatarButton.backgroundColor = color
-        
-        // Create label for initials
+        // Create default avatar with first letter
+        let firstLetter = String(username.prefix(1)).uppercased()
         let label = UILabel()
-        label.text = firstChar
-        label.font = UIFont.systemFont(ofSize: 20, weight: .medium)
+        label.text = firstLetter
+        label.textAlignment = .center
         label.textColor = .white
-        label.translatesAutoresizingMaskIntoConstraints = false
+        label.font = .systemFont(ofSize: 20, weight: .medium)
         
+        // Generate consistent background color based on username
+        let hash = abs(username.hashValue)
+        let hue = CGFloat(hash % 360) / 360.0
+        creatorAvatarButton.backgroundColor = UIColor(hue: hue, saturation: 0.8, brightness: 0.8, alpha: 1.0)
+        
+        // Add and constrain the label
         creatorAvatarButton.addSubview(label)
+        label.translatesAutoresizingMaskIntoConstraints = false
         NSLayoutConstraint.activate([
             label.centerXAnchor.constraint(equalTo: creatorAvatarButton.centerXAnchor),
             label.centerYAnchor.constraint(equalTo: creatorAvatarButton.centerYAnchor)
