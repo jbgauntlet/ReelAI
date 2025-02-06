@@ -7,6 +7,9 @@ class CameraViewController: UIViewController {
     private var captureSession: AVCaptureSession?
     private var videoPreviewLayer: AVCaptureVideoPreviewLayer?
     private var currentCameraPosition: AVCaptureDevice.Position = .back
+    private var movieFileOutput: AVCaptureMovieFileOutput?
+    private var isRecording = false
+    private var recordedVideoURL: URL?
     
     // MARK: - UI Components
     private let previewView: UIView = {
@@ -26,6 +29,15 @@ class CameraViewController: UIViewController {
         return button
     }()
     
+    private let recordingIndicator: UIView = {
+        let view = UIView()
+        view.backgroundColor = .red
+        view.layer.cornerRadius = 4
+        view.isHidden = true
+        view.translatesAutoresizingMaskIntoConstraints = false
+        return view
+    }()
+    
     private let flipCameraButton: UIButton = {
         let button = UIButton(type: .system)
         let config = UIImage.SymbolConfiguration(pointSize: 25, weight: .medium)
@@ -40,6 +52,16 @@ class CameraViewController: UIViewController {
         let config = UIImage.SymbolConfiguration(pointSize: 25, weight: .medium)
         button.setImage(UIImage(systemName: "arrow.left", withConfiguration: config), for: .normal)
         button.tintColor = .white
+        button.translatesAutoresizingMaskIntoConstraints = false
+        return button
+    }()
+    
+    private let nextButton: UIButton = {
+        let button = UIButton(type: .system)
+        button.setTitle("Next", for: .normal)
+        button.titleLabel?.font = .systemFont(ofSize: 17, weight: .semibold)
+        button.tintColor = .white
+        button.isHidden = true
         button.translatesAutoresizingMaskIntoConstraints = false
         return button
     }()
@@ -73,6 +95,8 @@ class CameraViewController: UIViewController {
         view.addSubview(captureButton)
         view.addSubview(flipCameraButton)
         view.addSubview(closeButton)
+        view.addSubview(recordingIndicator)
+        view.addSubview(nextButton)
         
         NSLayoutConstraint.activate([
             previewView.topAnchor.constraint(equalTo: view.topAnchor),
@@ -85,6 +109,11 @@ class CameraViewController: UIViewController {
             captureButton.widthAnchor.constraint(equalToConstant: 70),
             captureButton.heightAnchor.constraint(equalToConstant: 70),
             
+            recordingIndicator.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor, constant: 16),
+            recordingIndicator.centerXAnchor.constraint(equalTo: view.centerXAnchor),
+            recordingIndicator.widthAnchor.constraint(equalToConstant: 8),
+            recordingIndicator.heightAnchor.constraint(equalToConstant: 8),
+            
             flipCameraButton.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -20),
             flipCameraButton.centerYAnchor.constraint(equalTo: captureButton.centerYAnchor),
             flipCameraButton.widthAnchor.constraint(equalToConstant: 44),
@@ -93,12 +122,18 @@ class CameraViewController: UIViewController {
             closeButton.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor, constant: 16),
             closeButton.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: 16),
             closeButton.widthAnchor.constraint(equalToConstant: 44),
-            closeButton.heightAnchor.constraint(equalToConstant: 44)
+            closeButton.heightAnchor.constraint(equalToConstant: 44),
+            
+            nextButton.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -20),
+            nextButton.bottomAnchor.constraint(equalTo: view.safeAreaLayoutGuide.bottomAnchor, constant: -30),
+            nextButton.widthAnchor.constraint(equalToConstant: 60),
+            nextButton.heightAnchor.constraint(equalToConstant: 44)
         ])
         
         captureButton.addTarget(self, action: #selector(handleCapture), for: .touchUpInside)
         flipCameraButton.addTarget(self, action: #selector(handleFlipCamera), for: .touchUpInside)
         closeButton.addTarget(self, action: #selector(handleClose), for: .touchUpInside)
+        nextButton.addTarget(self, action: #selector(handleNext), for: .touchUpInside)
     }
     
     private func checkCameraPermissions() {
@@ -131,8 +166,23 @@ class CameraViewController: UIViewController {
             return
         }
         
+        // Add video input
         if captureSession.canAddInput(input) {
             captureSession.addInput(input)
+        }
+        
+        // Add audio input
+        if let audioDevice = AVCaptureDevice.default(for: .audio),
+           let audioInput = try? AVCaptureDeviceInput(device: audioDevice),
+           captureSession.canAddInput(audioInput) {
+            captureSession.addInput(audioInput)
+        }
+        
+        // Add movie file output
+        movieFileOutput = AVCaptureMovieFileOutput()
+        if let movieFileOutput = movieFileOutput,
+           captureSession.canAddOutput(movieFileOutput) {
+            captureSession.addOutput(movieFileOutput)
         }
         
         videoPreviewLayer = AVCaptureVideoPreviewLayer(session: captureSession)
@@ -182,8 +232,32 @@ class CameraViewController: UIViewController {
     
     // MARK: - Actions
     @objc private func handleCapture() {
-        // TODO: Implement video recording
-        print("Capture button tapped")
+        guard let movieFileOutput = movieFileOutput else { return }
+        
+        if !isRecording {
+            // Start recording
+            let paths = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)
+            let fileUrl = paths[0].appendingPathComponent("video_\(Date().timeIntervalSince1970).mov")
+            movieFileOutput.startRecording(to: fileUrl, recordingDelegate: self)
+            
+            // Update UI for recording state
+            UIView.animate(withDuration: 0.3) {
+                self.captureButton.backgroundColor = .red
+                self.recordingIndicator.isHidden = false
+                self.nextButton.isHidden = true
+            }
+        } else {
+            // Stop recording
+            movieFileOutput.stopRecording()
+            
+            // Update UI for stopped state
+            UIView.animate(withDuration: 0.3) {
+                self.captureButton.backgroundColor = .white
+                self.recordingIndicator.isHidden = true
+            }
+        }
+        
+        isRecording = !isRecording
     }
     
     @objc private func handleFlipCamera() {
@@ -192,6 +266,12 @@ class CameraViewController: UIViewController {
     
     @objc private func handleClose() {
         navigationController?.popViewController(animated: true)
+    }
+    
+    @objc private func handleNext() {
+        guard let videoURL = recordedVideoURL else { return }
+        let postVideoVC = PostVideoViewController(videoURL: videoURL)
+        navigationController?.pushViewController(postVideoVC, animated: true)
     }
     
     // MARK: - Alerts
@@ -222,5 +302,25 @@ class CameraViewController: UIViewController {
         alert.addAction(UIAlertAction(title: "OK", style: .default))
         
         present(alert, animated: true)
+    }
+}
+
+// MARK: - AVCaptureFileOutputRecordingDelegate
+extension CameraViewController: AVCaptureFileOutputRecordingDelegate {
+    func fileOutput(_ output: AVCaptureFileOutput, didFinishRecordingTo outputFileURL: URL, from connections: [AVCaptureConnection], error: Error?) {
+        if let error = error {
+            print("Error recording video: \(error.localizedDescription)")
+            return
+        }
+        
+        // Store the recorded video URL
+        recordedVideoURL = outputFileURL
+        
+        // Show the next button
+        DispatchQueue.main.async {
+            self.nextButton.isHidden = false
+        }
+        
+        print("Video recorded successfully at: \(outputFileURL)")
     }
 }

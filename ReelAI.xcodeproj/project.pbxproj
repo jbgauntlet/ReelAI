@@ -40,6 +40,7 @@
 		6F216C372D53F357000ED151 /* ProfileListsViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6F216C362D53F357000ED151 /* ProfileListsViewController.swift */; };
 		6F35440C2D54617400B83129 /* ColorPalette.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6F35440B2D54617400B83129 /* ColorPalette.swift */; };
 		6F35440E2D54C5C800B83129 /* ProfileOptionsViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6F35440D2D54C5C800B83129 /* ProfileOptionsViewController.swift */; };
+		6F3544102D54FF6900B83129 /* PostVideoViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6F35440F2D54FF6900B83129 /* PostVideoViewController.swift */; };
 		6FC41CA52D512CD7003849BC /* User.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6FC41CA42D512CD7003849BC /* User.swift */; };
 		6FC41CB42D5144DF003849BC /* GoogleService-Info.plist in Resources */ = {isa = PBXBuildFile; fileRef = 6FC41CB32D5144DF003849BC /* GoogleService-Info.plist */; };
 		6FC41CB72D5146DF003849BC /* FirebaseAnalytics in Frameworks */ = {isa = PBXBuildFile; productRef = 6FC41CB62D5146DF003849BC /* FirebaseAnalytics */; };
@@ -111,6 +112,7 @@
 		6F216C362D53F357000ED151 /* ProfileListsViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProfileListsViewController.swift; sourceTree = "<group>"; };
 		6F35440B2D54617400B83129 /* ColorPalette.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ColorPalette.swift; sourceTree = "<group>"; };
 		6F35440D2D54C5C800B83129 /* ProfileOptionsViewController.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ProfileOptionsViewController.swift; sourceTree = "<group>"; };
+		6F35440F2D54FF6900B83129 /* PostVideoViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PostVideoViewController.swift; sourceTree = "<group>"; };
 		6FC41CA42D512CD7003849BC /* User.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = User.swift; sourceTree = "<group>"; };
 		6FC41CB32D5144DF003849BC /* GoogleService-Info.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; path = "GoogleService-Info.plist"; sourceTree = "<group>"; };
 		6FC69C7A2D5205830020CF09 /* Video.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; name = Video.swift; path = ReelAI/Models/Video.swift; sourceTree = SOURCE_ROOT; };
@@ -293,6 +295,7 @@
 				6FC69C8B2D52C1170020CF09 /* PublicProfileViewController.swift */,
 				6FC69C8F2D52CE8A0020CF09 /* VideoScrollFeedViewController.swift */,
 				6F216C362D53F357000ED151 /* ProfileListsViewController.swift */,
+				6F35440F2D54FF6900B83129 /* PostVideoViewController.swift */,
 			);
 			path = CoreNavigationControllers;
 			sourceTree = "<group>";
@@ -425,6 +428,7 @@
 				6F216C372D53F357000ED151 /* ProfileListsViewController.swift in Sources */,
 				6F216C352D53D906000ED151 /* FieldType.swift in Sources */,
 				6FC69C882D52A67A0020CF09 /* CommentsViewController.swift in Sources */,
+				6F3544102D54FF6900B83129 /* PostVideoViewController.swift in Sources */,
 				04FB121C2C70C65E00A1C209 /* CustomView.swift in Sources */,
 				6F35440C2D54617400B83129 /* ColorPalette.swift in Sources */,
 				6FC69C902D52CE8A0020CF09 /* VideoScrollFeedViewController.swift in Sources */,

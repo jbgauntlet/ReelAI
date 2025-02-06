@@ -28,10 +28,10 @@ class MainTabBarController: UIViewController {
         friendsVC.tabBarItem = UITabBarItem(title: "Friends", image: UIImage(systemName: "person.2"), selectedImage: UIImage(systemName: "person.2.fill"))
         friendsVC.tabBarItem.tag = 1;
         
-        let videoFeedVC = UINavigationController(rootViewController: UploadViewController())
+        let videoFeedVC = UINavigationController(rootViewController: UIViewController())
         videoFeedVC.tabBarItem = UITabBarItem(title: "", image: UIImage(named: "create-video"), tag: 2)
         
-        let uploadVC = UINavigationController(rootViewController: CameraViewController())
+        let uploadVC = UINavigationController(rootViewController: UploadViewController())
         uploadVC.tabBarItem = UITabBarItem(title: "Inbox", image: UIImage(systemName: "bubble"), selectedImage: UIImage(systemName: "bubble.fill"))
         uploadVC.tabBarItem.tag = 3;
         
