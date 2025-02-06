@@ -149,6 +149,9 @@ class CommentsViewController: UIViewController {
         
         // Initially position container off screen
         containerView.transform = CGAffineTransform(translationX: 0, y: view.bounds.height)
+        
+        // Add delegate for text field
+        commentTextField.delegate = self
     }
     
     private func setupCollectionView() {
@@ -214,6 +217,9 @@ class CommentsViewController: UIViewController {
               let userId = Auth.auth().currentUser?.uid,
               let text = commentTextField.text?.trimmingCharacters(in: .whitespacesAndNewlines),
               !text.isEmpty else { return }
+        
+        // Dismiss keyboard first
+        commentTextField.resignFirstResponder()
         
         let db = Firestore.firestore()
         let batch = db.batch()
@@ -329,6 +335,9 @@ class CommentsViewController: UIViewController {
     }
     
     override func dismiss(animated flag: Bool, completion: (() -> Void)? = nil) {
+        // Dismiss keyboard before animating out
+        view.endEditing(true)
+        
         animateOut {
             super.dismiss(animated: false, completion: completion)
         }
@@ -515,5 +524,13 @@ class CommentCell: UICollectionViewCell {
             label.centerXAnchor.constraint(equalTo: avatarImageView.centerXAnchor),
             label.centerYAnchor.constraint(equalTo: avatarImageView.centerYAnchor)
         ])
+    }
+}
+
+// MARK: - UITextFieldDelegate
+extension CommentsViewController: UITextFieldDelegate {
+    func textFieldShouldReturn(_ textField: UITextField) -> Bool {
+        handlePost()
+        return true
     }
 }
