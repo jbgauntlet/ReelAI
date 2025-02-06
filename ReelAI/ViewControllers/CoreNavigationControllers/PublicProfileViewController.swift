@@ -14,6 +14,7 @@ class PublicProfileViewController: UIViewController {
     private var userVideos: [Video] = []
     private var videosListener: ListenerRegistration?
     private let transition = HorizontalCoverTransition()
+    private var isOwnProfile: Bool = false
     
     // MARK: - UI Components
     private let headerView: UIView = {
@@ -119,12 +120,20 @@ class PublicProfileViewController: UIViewController {
     override func viewDidLoad() {
         super.viewDidLoad()
         transitioningDelegate = self
+        checkIfOwnProfile()
         setupUI()
         setupCollectionView()
         fetchUserData()
         fetchUserVideos()
-        checkFollowStatus()
         fetchLikesCount()
+    }
+    
+    private func checkIfOwnProfile() {
+        if let currentUserId = Auth.auth().currentUser?.uid,
+           let profileUserId = userId {
+            isOwnProfile = currentUserId == profileUserId
+            followButton.isHidden = isOwnProfile
+        }
     }
     
     // MARK: - Setup
@@ -279,8 +288,10 @@ class PublicProfileViewController: UIViewController {
                 }
             }
             
-            // Check if current user is following this user
-            self.checkFollowStatus()
+            // Only check follow status if it's not the user's own profile
+            if !self.isOwnProfile {
+                self.checkFollowStatus()
+            }
         }
         
         // Fetch followers and following counts
