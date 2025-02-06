@@ -21,19 +21,24 @@ class MainTabBarController: UIViewController {
         
         // Initialize the view controllers with their respective navigation controllers and tab bar items
         let homeVC = UINavigationController(rootViewController: HomeViewController())
-        homeVC.tabBarItem = UITabBarItem(title: "Home", image: UIImage(systemName: "house"), tag: 0)
+        homeVC.tabBarItem = UITabBarItem(title: "Home", image: UIImage(systemName: "house"), selectedImage: UIImage(systemName: "house.fill"))
+        homeVC.tabBarItem.tag = 0
         
         let friendsVC = UINavigationController(rootViewController: ProfileListsViewController())
-        friendsVC.tabBarItem = UITabBarItem(title: "Friends", image: UIImage(systemName: "person.2"), tag: 1)
+        friendsVC.tabBarItem = UITabBarItem(title: "Friends", image: UIImage(systemName: "person.2"), selectedImage: UIImage(systemName: "person.2.fill"))
+        friendsVC.tabBarItem.tag = 1
         
         let videoFeedVC = UINavigationController(rootViewController: VideoScrollContentViewController())
-        videoFeedVC.tabBarItem = UITabBarItem(title: "", image: UIImage(systemName: "plus.circle.fill"), tag: 2)
+        videoFeedVC.tabBarItem = UITabBarItem(title: "", image: UIImage(systemName: "plus.circle.fill"), selectedImage: UIImage(systemName: "plus.circle.fill"))
+        videoFeedVC.tabBarItem.tag = 2
         
         let uploadVC = UINavigationController(rootViewController: UploadViewController())
-        uploadVC.tabBarItem = UITabBarItem(title: "Upload", image: UIImage(systemName: "video.badge.plus"), tag: 3)
+        uploadVC.tabBarItem = UITabBarItem(title: "Upload", image: UIImage(systemName: "video.badge.plus"), selectedImage: UIImage(systemName: "video.badge.plus.fill"))
+        uploadVC.tabBarItem.tag = 3
         
         let profileVC = UINavigationController(rootViewController: ProfileViewController())
-        profileVC.tabBarItem = UITabBarItem(title: "Profile", image: UIImage(systemName: "person"), tag: 4)
+        profileVC.tabBarItem = UITabBarItem(title: "Profile", image: UIImage(systemName: "person"), selectedImage: UIImage(systemName: "person.fill"))
+        profileVC.tabBarItem.tag = 4
         
         viewControllers = [homeVC, friendsVC, videoFeedVC, uploadVC, profileVC]
         
@@ -70,6 +75,7 @@ class MainTabBarController: UIViewController {
                 let resizedImage = image!.resized(to: CGSize(width: 50, height: 50))
                 
                 buttons[index].setImage(resizedImage, for: .normal)
+                buttons[index].setImage(viewController.tabBarItem.selectedImage, for: .selected)
             } else {
                 // Customize other buttons
                 let image = viewController.tabBarItem.image?.withRenderingMode(.alwaysOriginal).withTintColor(ColorPalette.gray)
@@ -82,7 +88,7 @@ class MainTabBarController: UIViewController {
                 let newWidth = oldWidth! * scaleFactor
                 
                 let resizedImage = image!.resized(to: CGSize(width: newWidth, height: 25))
-                let selectedImage = resizedImage?.withTintColor(.black)
+                let selectedImage = viewController.tabBarItem.selectedImage?.withRenderingMode(.alwaysOriginal).withTintColor(.black)
                 buttons[index].setImage(resizedImage, for: .normal)
                 buttons[index].setImage(selectedImage, for: .selected)
             }
@@ -197,6 +203,8 @@ class MainTabBarController: UIViewController {
             return
         }
         
+        print("Selecting tab at index: \(index)")
+        
         // Remove the current view controller's view
         let currentVC = viewControllers[selectedIndex]
         currentVC.view.removeFromSuperview()
@@ -212,8 +220,18 @@ class MainTabBarController: UIViewController {
         view.insertSubview(selectedVC.view, belowSubview: tabBarView)
         
         // Update the selected button state and label colors
+        print("Deselecting tab at index: \(selectedIndex)")
         buttons[selectedIndex].isSelected = false
+        let originalImage = viewControllers[selectedIndex].tabBarItem.image?.withRenderingMode(.alwaysOriginal).withTintColor(ColorPalette.gray)
+        print("Setting original image for deselected tab: \(String(describing: originalImage))")
+        buttons[selectedIndex].setImage(originalImage, for: .normal)
+
+        print("Selecting tab at index: \(index)")
         buttons[index].isSelected = true
+        let filledImage = viewControllers[index].tabBarItem.selectedImage?.withRenderingMode(.alwaysOriginal).withTintColor(.black)
+        print("Setting filled image for selected tab: \(String(describing: filledImage))")
+        buttons[index].setImage(filledImage, for: .normal)
+
         labels[selectedIndex].textColor = ColorPalette.gray
         labels[index].textColor = .black
         
