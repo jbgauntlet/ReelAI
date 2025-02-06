@@ -31,7 +31,7 @@ class MainTabBarController: UIViewController {
         let videoFeedVC = UINavigationController(rootViewController: UploadViewController())
         videoFeedVC.tabBarItem = UITabBarItem(title: "", image: UIImage(named: "create-video"), tag: 2)
         
-        let uploadVC = UINavigationController(rootViewController: InboxViewController())
+        let uploadVC = UINavigationController(rootViewController: CameraViewController())
         uploadVC.tabBarItem = UITabBarItem(title: "Inbox", image: UIImage(systemName: "bubble"), selectedImage: UIImage(systemName: "bubble.fill"))
         uploadVC.tabBarItem.tag = 3;
         
@@ -203,28 +203,37 @@ class MainTabBarController: UIViewController {
             return
         }
         
-        // Remove the current view controller's view
-        let currentVC = viewControllers[selectedIndex]
-        currentVC.view.removeFromSuperview()
+        // Check if the selected tab is not the middle button
+        if index != 2 {
+            // Remove the current view controller's view
+            let currentVC = viewControllers[selectedIndex]
+            currentVC.view.removeFromSuperview()
+            
+            // Add the selected view controller's view
+            let selectedVC = viewControllers[index]
+            selectedVC.view.frame = CGRect(
+                x: view.bounds.minX,
+                y: view.bounds.minY,
+                width: view.bounds.width,
+                height: view.bounds.height - tabBarHeight
+            )
+            view.insertSubview(selectedVC.view, belowSubview: tabBarView)
+            
+            // Update the selected button state and label colors
+            buttons[selectedIndex].isSelected = false
+            buttons[index].isSelected = true
+            labels[selectedIndex].textColor = ColorPalette.gray
+            labels[index].textColor = .black
+            
+            // Update the selected index
+            selectedIndex = index
+        }
+        else {
+            let cameraVC = CameraViewController()
+            navigationController?.pushViewController(cameraVC, animated: true)
+        }
         
-        // Add the selected view controller's view
-        let selectedVC = viewControllers[index]
-        selectedVC.view.frame = CGRect(
-            x: view.bounds.minX,
-            y: view.bounds.minY,
-            width: view.bounds.width,
-            height: view.bounds.height - tabBarHeight
-        )
-        view.insertSubview(selectedVC.view, belowSubview: tabBarView)
-        
-        // Update the selected button state and label colors
-        buttons[selectedIndex].isSelected = false
-        buttons[index].isSelected = true
-        labels[selectedIndex].textColor = ColorPalette.gray
-        labels[index].textColor = .black
-        
-        // Update the selected index
-        selectedIndex = index
+
     }
     
     // Function to handle tab button tap events
