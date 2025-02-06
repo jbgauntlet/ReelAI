@@ -174,6 +174,15 @@ class ProfileViewController: UIViewController {
         return cv
     }()
     
+    private let optionsButton: UIButton = {
+        let button = UIButton(type: .system)
+        let config = UIImage.SymbolConfiguration(pointSize: 20, weight: .medium)
+        button.setImage(UIImage(systemName: "line.horizontal.3", withConfiguration: config), for: .normal)
+        button.tintColor = .black
+        button.translatesAutoresizingMaskIntoConstraints = false
+        return button
+    }()
+    
     // MARK: - Lifecycle
     override func viewDidLoad() {
         super.viewDidLoad()
@@ -208,6 +217,8 @@ class ProfileViewController: UIViewController {
         contentView.addSubview(addBioButton)
         contentView.addSubview(sectionSelector)
         contentView.addSubview(videoCollectionView)
+        
+        view.addSubview(optionsButton)
         
         videoCollectionView.delegate = self
         videoCollectionView.dataSource = self
@@ -259,7 +270,12 @@ class ProfileViewController: UIViewController {
             videoCollectionView.leadingAnchor.constraint(equalTo: contentView.leadingAnchor),
             videoCollectionView.trailingAnchor.constraint(equalTo: contentView.trailingAnchor),
             videoCollectionView.bottomAnchor.constraint(equalTo: contentView.bottomAnchor),
-            videoCollectionView.heightAnchor.constraint(equalTo: view.heightAnchor, multiplier: 0.5)
+            videoCollectionView.heightAnchor.constraint(equalTo: view.heightAnchor, multiplier: 0.5),
+            
+            optionsButton.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor, constant: 0),
+            optionsButton.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -16),
+            optionsButton.widthAnchor.constraint(equalToConstant: 44),
+            optionsButton.heightAnchor.constraint(equalToConstant: 44)
         ])
     }
     
@@ -269,6 +285,7 @@ class ProfileViewController: UIViewController {
         shareProfileButton.addTarget(self, action: #selector(shareProfileTapped), for: .touchUpInside)
         addFriendButton.addTarget(self, action: #selector(addFriendTapped), for: .touchUpInside)
         addBioButton.addTarget(self, action: #selector(addBioTapped), for: .touchUpInside)
+        optionsButton.addTarget(self, action: #selector(optionsButtonTapped), for: .touchUpInside)
     }
     
     // MARK: - Actions
@@ -293,6 +310,17 @@ class ProfileViewController: UIViewController {
     
     @objc private func addBioTapped() {
         // TODO: Implement add bio
+    }
+    
+    @objc private func optionsButtonTapped() {
+        let optionsVC = ProfileOptionsViewController { [weak self] option in
+            guard let self = self else { return }
+            switch option {
+            case .logout:
+                GlobalDataManager.shared.logout(from: self)
+            }
+        }
+        present(optionsVC, animated: true)
     }
     
     // MARK: - Data Fetching
