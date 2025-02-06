@@ -120,33 +120,100 @@ class AddFriendViewController: UIViewController {
             return
         }
         
+        let lowercaseQuery = query.lowercased()
+        print("🔍 Starting search with query: '\(query)' (lowercase: '\(lowercaseQuery)')")
         loadingIndicator.startAnimating()
         
         guard let currentUserId = Auth.auth().currentUser?.uid else { return }
         
-        let query = db.collection("users")
-            .whereField("username_lowercase", isGreaterThanOrEqualTo: query.lowercased())
-            .whereField("username_lowercase", isLessThan: query.lowercased() + "\\uf8ff")
+        // First try exact username match
+        let exactQuery = db.collection("users")
+            .whereField("username_lowercase", isEqualTo: lowercaseQuery)
             .limit(to: 5)
         
-        query.getDocuments { [weak self] snapshot, error in
-            guard let self = self else { return }
-            
-            self.loadingIndicator.stopAnimating()
-            
+        // Then try partial matches with username_lowercase
+        let partialQuery = db.collection("users")
+            .whereField("username_lowercase", isGreaterThanOrEqualTo: lowercaseQuery)
+            .whereField("username_lowercase", isLessThan: lowercaseQuery + "\u{f8ff}")
+            .limit(to: 5)
+        
+        // Debug: Let's also try a simple query to get all users
+        let debugQuery = db.collection("users").limit(to: 5)
+        
+        // Execute queries
+        let group = DispatchGroup()
+        var allResults = Set<User>() // Use Set to avoid duplicates
+        
+        group.enter()
+        exactQuery.getDocuments { [weak self] snapshot, error in
+            defer { group.leave() }
             if let error = error {
-                print("Error searching users: \(error.localizedDescription)")
+                print("❌ Exact query error: \(error.localizedDescription)")
                 return
             }
-            
-            guard let documents = snapshot?.documents else { return }
-            
-            self.searchResults = documents.compactMap { document -> User? in
-                if document.documentID == currentUserId { return nil }
-                return User(from: document.data(), uid: document.documentID)
+            if let documents = snapshot?.documents {
+                print("📄 Exact query found \(documents.count) results")
+                documents.forEach { document in
+                    if document.documentID != currentUserId {
+                        print("📝 Exact match document data: \(document.data())")
+                        if let user = User(from: document.data(), uid: document.documentID) {
+                            allResults.insert(user)
+                        }
+                    }
+                }
             }
+        }
+        
+        group.enter()
+        partialQuery.getDocuments { [weak self] snapshot, error in
+            defer { group.leave() }
+            if let error = error {
+                print("❌ Partial query error: \(error.localizedDescription)")
+                return
+            }
+            if let documents = snapshot?.documents {
+                print("📄 Partial query found \(documents.count) results")
+                documents.forEach { document in
+                    if document.documentID != currentUserId {
+                        print("📝 Partial match document data: \(document.data())")
+                        if let user = User(from: document.data(), uid: document.documentID) {
+                            allResults.insert(user)
+                        }
+                    }
+                }
+            }
+        }
+        
+        // Debug: Get all users to verify data exists
+        group.enter()
+        debugQuery.getDocuments { snapshot, error in
+            defer { group.leave() }
+            if let error = error {
+                print("❌ Debug query error: \(error.localizedDescription)")
+                return
+            }
+            if let documents = snapshot?.documents {
+                print("🔍 Debug: Found \(documents.count) total users in database")
+                documents.forEach { document in
+                    print("📝 User document: \(document.documentID)")
+                    print("   username: \(document.data()["username"] ?? "nil")")
+                    print("   username_lowercase: \(document.data()["username_lowercase"] ?? "nil")")
+                }
+            }
+        }
+        
+        group.notify(queue: .main) { [weak self] in
+            guard let self = self else { return }
+            self.loadingIndicator.stopAnimating()
             
+            // Convert Set to Array and sort by username
+            self.searchResults = Array(allResults).sorted { ($0.username ?? "") < ($1.username ?? "") }
             self.collectionView.reloadData()
+            
+            print("🔍 Final search results: \(self.searchResults.count) users found")
+            self.searchResults.forEach { user in
+                print("👤 Found user: @\(user.username ?? "no_username") (\(user.name ?? "no_name"))")
+            }
         }
     }
     

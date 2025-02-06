@@ -193,20 +193,27 @@ class EditProfileItemViewController: UIViewController {
         let db = Firestore.firestore()
         let userRef = db.collection("users").document(userId)
         
-        let field: String
+        let value = inputField.text ?? ""
+        var updateData: [String: Any] = [:]
+        
         switch fieldType {
-        case .name: field = "name"
-        case .username: field = "username"
-        case .bio: field = "bio"
-        case .links: field = "links"
+        case .name:
+            updateData["name"] = value
+            updateData["name_lowercase"] = value.lowercased()
+        case .username:
+            updateData["username"] = value
+            updateData["username_lowercase"] = value.lowercased()
+        case .bio:
+            updateData["bio"] = value
+        case .links:
+            updateData["links"] = value
         }
         
-        let value = inputField.text ?? ""
-        userRef.updateData([field: value]) { [weak self] error in
+        userRef.updateData(updateData) { [weak self] error in
             guard let self = self else { return }
             
             if let error = error {
-                print("Error updating \(field): \(error)")
+                print("Error updating \(self.fieldType): \(error)")
                 // TODO: Show error alert
             } else {
                 // Notify delegate before dismissing

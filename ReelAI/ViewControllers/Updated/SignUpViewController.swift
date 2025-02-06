@@ -263,7 +263,9 @@ class SignUpViewController: UIViewController {
                 let userData: [String: Any] = [
                     // Basic Info
                     "name": name,
+                    "name_lowercase": name.lowercased(),
                     "username": username,
+                    "username_lowercase": username.lowercased(),
                     "email": email,
                     "bio": "",
                     "avatar": "",

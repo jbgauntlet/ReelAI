@@ -7,7 +7,7 @@ import Foundation
 import FirebaseAuth
 import FirebaseFirestore
 
-struct User {
+struct User: Hashable {
     // Basic Info
     var uid: String                // Firebase User ID (required)
     var name: String?             // Display name
@@ -29,6 +29,15 @@ struct User {
     var createdAt: Date?
     var updatedAt: Date?
     var isEmailVerified: Bool
+    
+    // MARK: - Hashable Conformance
+    func hash(into hasher: inout Hasher) {
+        hasher.combine(uid)  // Only use uid for hashing since it's unique
+    }
+    
+    static func == (lhs: User, rhs: User) -> Bool {
+        return lhs.uid == rhs.uid  // Compare only uids for equality
+    }
     
     // Initialize from Firebase User
     init(from firebaseUser: FirebaseAuth.User? = nil) {
