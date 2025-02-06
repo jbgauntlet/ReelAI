@@ -133,10 +133,11 @@ class InboxViewController: UIViewController {
                 .whereField("user_id", isEqualTo: userId)
                 .order(by: "created_at", descending: true)
         } else {
-            // Only friend requests
+            // Only pending friend requests (exclude accepted ones)
             query = db.collection("notifications")
                 .whereField("user_id", isEqualTo: userId)
-                .whereField("type", isEqualTo: "friend_request")
+                .whereField("type", isEqualTo: "friend_request")  // Only pending requests
+                .whereField("read", isEqualTo: false)  // Only unread requests
                 .order(by: "created_at", descending: true)
         }
         
@@ -155,6 +156,11 @@ class InboxViewController: UIViewController {
                       let content = data["content"] as? String,
                       let createdAtTimestamp = data["created_at"] as? Timestamp,
                       let relatedId = data["related_id"] as? String else {
+                    return nil
+                }
+                
+                // Skip friend request accepted notifications in Friend Requests tab
+                if self.segmentedControl.selectedSegmentIndex == 1 && type == "friend_request_accepted" {
                     return nil
                 }
                 
@@ -215,10 +221,10 @@ class InboxViewController: UIViewController {
         
         // Update empty state based on current filter
         if segmentedControl.selectedSegmentIndex == 1 {
-            // Friend Requests tab
-            let hasFriendRequests = notifications.contains { $0.type == "friend_request" }
+            // Friend Requests tab - only show for pending friend requests
+            let hasPendingRequests = notifications.contains { $0.type == "friend_request" }
             emptyStateLabel.text = "No friend requests"
-            emptyStateLabel.isHidden = hasFriendRequests
+            emptyStateLabel.isHidden = hasPendingRequests
         } else {
             // All notifications tab
             emptyStateLabel.text = "No notifications yet"
@@ -226,6 +232,43 @@ class InboxViewController: UIViewController {
         }
         
         collectionView.reloadData()
+    }
+    
+    // MARK: - Notification Handling
+    private func markAsRead(_ notification: Notification) {
+        let db = Firestore.firestore()
+        db.collection("notifications").document(notification.id).updateData([
+            "read": true
+        ])
+    }
+    
+    private func handleNotificationTap(_ notification: Notification) {
+        // Mark as read
+        markAsRead(notification)
+        
+        // Handle different notification types
+        switch notification.type {
+        case "friend_request_accepted":
+            // Navigate to the friend's profile
+            if let friendshipId = notification.relatedId {
+                let components = friendshipId.split(separator: "_")
+                if components.count == 2,
+                   let currentUserId = Auth.auth().currentUser?.uid {
+                    let friendId = String(currentUserId == components[0] ? components[1] : components[0])
+                    let profileVC = PublicProfileViewController()
+                    profileVC.userId = friendId
+                    navigationController?.pushViewController(profileVC, animated: true)
+                }
+            }
+            
+        case "friend_request":
+            // Already handled by the accept/decline buttons
+            break
+            
+        // Add more cases for other notification types as needed
+        default:
+            break
+        }
     }
     
     deinit {
@@ -239,6 +282,11 @@ extension InboxViewController: UICollectionViewDataSource, UICollectionViewDeleg
         return notifications.count
     }
     
+    func collectionView(_ collectionView: UICollectionView, didSelectItemAt indexPath: IndexPath) {
+        let notification = notifications[indexPath.item]
+        handleNotificationTap(notification)
+    }
+    
     func collectionView(_ collectionView: UICollectionView, cellForItemAt indexPath: IndexPath) -> UICollectionViewCell {
         let notification = notifications[indexPath.item]
         
@@ -250,6 +298,14 @@ extension InboxViewController: UICollectionViewDataSource, UICollectionViewDeleg
         } else {
             let cell = collectionView.dequeueReusableCell(withReuseIdentifier: "NotificationCell", for: indexPath) as! NotificationCell
             cell.configure(with: notification)
+            
+            // Add tap gesture if notification is actionable
+            if notification.type == "friend_request_accepted" {
+                cell.isUserInteractionEnabled = true
+            } else {
+                cell.isUserInteractionEnabled = false
+            }
+            
             return cell
         }
     }
@@ -305,6 +361,8 @@ extension InboxViewController: FriendRequestCellDelegate {
                     
                     // Delete notifications from Firestore
                     documents.forEach { document in
+                        // Mark as read before deleting
+                        batch.updateData(["read": true], forDocument: document.reference)
                         batch.deleteDocument(document.reference)
                     }
                     
@@ -318,7 +376,7 @@ extension InboxViewController: FriendRequestCellDelegate {
                         ]
                         batch.setData(friendshipData, forDocument: db.collection("friendships").document(friendshipId))
                         
-                        // Create notification for sender
+                        // Create notification for sender (already marked as unread)
                         let notificationData: [String: Any] = [
                             "user_id": senderId,
                             "type": "friend_request_accepted",
