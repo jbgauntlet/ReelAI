@@ -7,10 +7,10 @@ import FirebaseAuth
 // Video Cache Manager
 class VideoCache {
     static let shared = VideoCache()
-    private let cache = NSCache<NSString, AVURLAsset>()
+    private let cache = NSCache<NSString, AVURLAsset>()  // Cache AVURLAsset instead of AVPlayerItem
     private let fileManager = FileManager.default
     private let cacheDirectory: URL
-    private let maxCacheSize: Int = 100 * 1024 * 1024  // Reduce to 100MB
+    private let maxCacheSize: Int = 500 * 1024 * 1024  // 500MB
     
     private init() {
         cacheDirectory = fileManager.urls(for: .cachesDirectory, in: .userDomainMask)[0]
@@ -19,8 +19,8 @@ class VideoCache {
         try? fileManager.createDirectory(at: cacheDirectory, 
                                       withIntermediateDirectories: true)
         
-        cache.countLimit = 3  // Only keep 3 videos in memory
-        cache.totalCostLimit = 50 * 1024 * 1024  // 50MB limit
+        cache.countLimit = 3
+        cache.totalCostLimit = 250 * 1024 * 1024
         
         cleanOldCacheFiles()
     }
@@ -35,10 +35,14 @@ class VideoCache {
             asset = cachedAsset
         } else {
             print("🔄 Creating new video asset")
-            asset = AVURLAsset(url: url)
+            asset = AVURLAsset(url: url, options: [
+                "AVURLAssetOutOfBandMIMETypeKey": "video/mp4",
+                "AVURLAssetHTTPHeaderFieldsKey": ["Accept": "video/mp4"]
+            ])
             cache.setObject(asset, forKey: cacheKey)
         }
         
+        // Always create a new player item
         return AVPlayerItem(asset: asset)
     }
     
@@ -72,7 +76,6 @@ class VideoCache {
     }
     
     func clearCache() {
-        print("🧹 Clearing video cache")
         cache.removeAllObjects()
         try? fileManager.removeItem(at: cacheDirectory)
         try? fileManager.createDirectory(at: cacheDirectory, 
@@ -452,72 +455,35 @@ class FullScreenVideoCell: UICollectionViewCell {
     }
     
     func play() {
-        print("▶️ [Cell \(cellId)] Attempting to play video")
-        if player == nil {
-            print("⚠️ [Cell \(cellId)] Player is nil when attempting to play")
-            return
-        }
+        print("▶️ Playing video in cell \(cellId)")
         player?.seek(to: .zero)
         player?.play()
-        print("✅ [Cell \(cellId)] Video playback started")
     }
     
     func pause() {
-        print("⏸️ [Cell \(cellId)] Attempting to pause video")
-        if player == nil {
-            print("⚠️ [Cell \(cellId)] Player is nil when attempting to pause")
-            return
-        }
+        print("⏸️ Pausing video in cell \(cellId)")
         player?.pause()
-        print("✅ [Cell \(cellId)] Video paused")
     }
     
     override func prepareForReuse() {
-        print("♻️ [Cell \(cellId)] Preparing for reuse - Starting cleanup")
         super.prepareForReuse()
-        
-        // Stop playback first
-        if player?.timeControlStatus == .playing {
-            print("⏹️ [Cell \(cellId)] Stopping active playback")
-            player?.pause()
-        }
-        
-        // Remove observers before clearing player
-        print("🗑️ [Cell \(cellId)] Removing observers")
-        NotificationCenter.default.removeObserver(self)
-        player?.currentItem?.removeObserver(self, forKeyPath: "status")
-        
-        // Clear player and its items
-        print("🗑️ [Cell \(cellId)] Clearing player resources")
-        player?.replaceCurrentItem(with: nil)
-        player = nil
-        
-        // Remove player layer
-        print("🗑️ [Cell \(cellId)] Removing player layer")
-        playerLayer?.removeFromSuperlayer()
-        playerLayer = nil
-        
-        // Clear video content
-        print("🗑️ [Cell \(cellId)] Clearing video content")
-        currentVideo = nil
-        
-        // Remove any subviews from avatar
-        print("🗑️ [Cell \(cellId)] Clearing avatar subviews")
-        creatorAvatarButton.subviews.forEach { $0.removeFromSuperview() }
-        
-        print("✅ [Cell \(cellId)] Cleanup complete")
-    }
-    
-    deinit {
-        print("🗑️ [Cell \(cellId)] Being deallocated - Starting final cleanup")
-        // Ensure all resources are properly cleaned up
-        NotificationCenter.default.removeObserver(self)
+        print("♻️ Preparing cell \(cellId) for reuse")
         player?.pause()
         player?.replaceCurrentItem(with: nil)
         player = nil
         playerLayer?.removeFromSuperlayer()
         playerLayer = nil
-        print("✅ [Cell \(cellId)] Final cleanup complete")
+        NotificationCenter.default.removeObserver(self)
+        
+        // Clear current video
+        currentVideo = nil
+        
+        // Remove avatar label if it exists
+        creatorAvatarButton.subviews.forEach { $0.removeFromSuperview() }
+    }
+    
+    deinit {
+        print("🗑️ VideoCell \(cellId) being deallocated")
     }
     
     private func updateActionBar(with video: Video) {
@@ -785,7 +751,7 @@ class VideoScrollContentViewController: UIViewController {
     // Pagination and real-time updates
     private var videosListener: ListenerRegistration?
     private var lastDocument: DocumentSnapshot?
-    private let batchSize = 10
+    private let batchSize = 3
     private var isLoadingMore = false
     private var hasMoreVideos = true
     
@@ -1198,47 +1164,18 @@ extension VideoScrollContentViewController: UICollectionViewDataSource, UICollec
     }
     
     func scrollViewDidEndDecelerating(_ scrollView: UIScrollView) {
-        print("\n📱 Scroll ended, finding visible cell")
         let visibleRect = CGRect(origin: collectionView.contentOffset, size: collectionView.bounds.size)
         let visiblePoint = CGPoint(x: visibleRect.midX, y: visibleRect.midY)
         
         if let indexPath = collectionView.indexPathForItem(at: visiblePoint),
            let cell = collectionView.cellForItem(at: indexPath) as? FullScreenVideoCell {
-            print("📱 Found visible cell at index: \(indexPath.item)")
-            
-            // If we have a different currently playing cell, clean it up completely
-            if let currentCell = currentlyPlayingCell, currentCell != cell {
-                print("🧹 Cleaning up previous cell")
-                currentCell.pause()
-                currentCell.prepareForReuse()  // Full cleanup
-            }
-            
-            // Clean up old references
-            if currentlyPlayingCell != cell {
-                print("🔄 Switching to new cell")
-                currentlyPlayingCell = cell
-                
-                // Clear prefetched assets except for adjacent videos
-                clearDistantPrefetchedAssets(currentIndex: indexPath.item)
-            }
-            
-            print("▶️ Playing new cell")
+            print("📱 Switching to video at index: \(indexPath.item)")
+            currentlyPlayingCell?.pause()
             cell.play()
+            currentlyPlayingCell = cell
             
-            // Clear video cache if we have too many items
-            if prefetchedAssets.count > 5 {
-                print("🧹 Clearing excess prefetched assets")
-                VideoCache.shared.clearCache()
-                prefetchedAssets.removeAll()
-            }
-        }
-    }
-    
-    private func clearDistantPrefetchedAssets(currentIndex: Int) {
-        let keepRange = (currentIndex - 1)...(currentIndex + 1)
-        prefetchedAssets = prefetchedAssets.filter { videoId, _ in
-            guard let index = videos.firstIndex(where: { $0.id == videoId }) else { return false }
-            return keepRange.contains(index)
+            // Update loading window and perform cleanup
+            updateLoadingWindow()
         }
     }
     
