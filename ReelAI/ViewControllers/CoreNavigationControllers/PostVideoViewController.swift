@@ -101,9 +101,18 @@ class PostVideoViewController: UIViewController {
         let button = UIButton(type: .system)
         let config = UIImage.SymbolConfiguration(pointSize: 25, weight: .medium)
         button.setImage(UIImage(systemName: "arrow.left", withConfiguration: config), for: .normal)
-        button.tintColor = .white
+        button.tintColor = .black
         button.translatesAutoresizingMaskIntoConstraints = false
         return button
+    }()
+    
+    private let headerLabel: UILabel = {
+        let label = UILabel()
+        label.text = "Post Reel"
+        label.font = .systemFont(ofSize: 24, weight: .bold)
+        label.textAlignment = .center
+        label.translatesAutoresizingMaskIntoConstraints = false
+        return label
     }()
     
     // MARK: - Initialization
@@ -128,10 +137,10 @@ class PostVideoViewController: UIViewController {
     
     // MARK: - Setup
     private func setupUI() {
-        view.backgroundColor = .black
-        title = "New Post"
+        view.backgroundColor = .white
         
-        view.addSubview(videoPreviewView)
+        view.addSubview(backButton)
+        view.addSubview(headerLabel)
         view.addSubview(titleTextField)
         view.addSubview(captionTextField)
         view.addSubview(tagTextField)
@@ -139,7 +148,6 @@ class PostVideoViewController: UIViewController {
         view.addSubview(tagsLabel)
         view.addSubview(postButton)
         view.addSubview(progressLabel)
-        view.addSubview(backButton)
         
         NSLayoutConstraint.activate([
             backButton.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor, constant: 16),
@@ -147,12 +155,12 @@ class PostVideoViewController: UIViewController {
             backButton.widthAnchor.constraint(equalToConstant: 44),
             backButton.heightAnchor.constraint(equalToConstant: 44),
             
-            videoPreviewView.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor),
-            videoPreviewView.leadingAnchor.constraint(equalTo: view.leadingAnchor),
-            videoPreviewView.trailingAnchor.constraint(equalTo: view.trailingAnchor),
-            videoPreviewView.heightAnchor.constraint(equalTo: view.widthAnchor, multiplier: 16/9),
+            headerLabel.centerYAnchor.constraint(equalTo: backButton.centerYAnchor),
+            headerLabel.centerXAnchor.constraint(equalTo: view.centerXAnchor),
+            headerLabel.leadingAnchor.constraint(equalTo: backButton.trailingAnchor, constant: 16),
+            headerLabel.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -16),
             
-            titleTextField.topAnchor.constraint(equalTo: videoPreviewView.bottomAnchor, constant: 20),
+            titleTextField.topAnchor.constraint(equalTo: headerLabel.bottomAnchor, constant: 30),
             titleTextField.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: 16),
             titleTextField.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -16),
             titleTextField.heightAnchor.constraint(equalToConstant: 44),
@@ -190,6 +198,8 @@ class PostVideoViewController: UIViewController {
         postButton.addTarget(self, action: #selector(handlePost), for: .touchUpInside)
         backButton.addTarget(self, action: #selector(handleBack), for: .touchUpInside)
         addTagButton.addTarget(self, action: #selector(handleAddTag), for: .touchUpInside)
+        
+        updateTagsLabel()
     }
     
     // MARK: - Actions
