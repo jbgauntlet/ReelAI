@@ -13,6 +13,7 @@ class PublicProfileViewController: UIViewController {
     var userId: String?
     private var userVideos: [Video] = []
     private var videosListener: ListenerRegistration?
+    private let transition = HorizontalCoverTransition()
     
     // MARK: - UI Components
     private let headerView: UIView = {
@@ -117,6 +118,7 @@ class PublicProfileViewController: UIViewController {
     // MARK: - Lifecycle
     override func viewDidLoad() {
         super.viewDidLoad()
+        transitioningDelegate = self
         setupUI()
         setupCollectionView()
         fetchUserData()
@@ -182,7 +184,7 @@ class PublicProfileViewController: UIViewController {
             collectionView.topAnchor.constraint(equalTo: headerView.bottomAnchor),
             collectionView.leadingAnchor.constraint(equalTo: view.leadingAnchor),
             collectionView.trailingAnchor.constraint(equalTo: view.trailingAnchor),
-            collectionView.bottomAnchor.constraint(equalTo: view.bottomAnchor)
+            collectionView.bottomAnchor.constraint(equalTo: view.bottomAnchor, constant: 90),
         ])
         
         followButton.addTarget(self, action: #selector(handleFollowTap), for: .touchUpInside)
@@ -445,7 +447,7 @@ class PublicProfileViewController: UIViewController {
     }
     
     @objc private func handleBack() {
-        navigationController?.popViewController(animated: true)
+        dismiss(animated: true)
     }
     
     deinit {
@@ -476,74 +478,16 @@ extension PublicProfileViewController: UICollectionViewDataSource, UICollectionV
         present(videoScrollFeedVC, animated: true)
     }
 }
-//
-//// MARK: - ProfileVideoThumbnailCell
-//class ProfileVideoThumbnailCell: UICollectionViewCell {
-//    private let thumbnailImageView: UIImageView = {
-//        let iv = UIImageView()
-//        iv.contentMode = .scaleAspectFill
-//        iv.clipsToBounds = true
-//        iv.backgroundColor = .systemGray6
-//        iv.translatesAutoresizingMaskIntoConstraints = false
-//        return iv
-//    }()
-//    
-//    private let viewsLabel: UILabel = {
-//        let label = UILabel()
-//        label.font = UIFont.systemFont(ofSize: 12)
-//        label.textColor = .white
-//        label.translatesAutoresizingMaskIntoConstraints = false
-//        return label
-//    }()
-//    
-//    private let gradientLayer: CAGradientLayer = {
-//        let layer = CAGradientLayer()
-//        layer.colors = [UIColor.clear.cgColor, UIColor.black.withAlphaComponent(0.5).cgColor]
-//        layer.locations = [0.5, 1.0]
-//        return layer
-//    }()
-//    
-//    override init(frame: CGRect) {
-//        super.init(frame: frame)
-//        setupUI()
-//    }
-//    
-//    required init?(coder: NSCoder) {
-//        fatalError("init(coder:) has not been implemented")
-//    }
-//    
-//    private func setupUI() {
-//        contentView.layer.addSublayer(gradientLayer)
-//        contentView.addSubview(thumbnailImageView)
-//        contentView.addSubview(viewsLabel)
-//        
-//        NSLayoutConstraint.activate([
-//            thumbnailImageView.topAnchor.constraint(equalTo: contentView.topAnchor),
-//            thumbnailImageView.leadingAnchor.constraint(equalTo: contentView.leadingAnchor),
-//            thumbnailImageView.trailingAnchor.constraint(equalTo: contentView.trailingAnchor),
-//            thumbnailImageView.bottomAnchor.constraint(equalTo: contentView.bottomAnchor),
-//            
-//            viewsLabel.leadingAnchor.constraint(equalTo: contentView.leadingAnchor, constant: 8),
-//            viewsLabel.bottomAnchor.constraint(equalTo: contentView.bottomAnchor, constant: -8)
-//        ])
-//    }
-//    
-//    override func layoutSubviews() {
-//        super.layoutSubviews()
-//        gradientLayer.frame = bounds
-//    }
-//    
-//    func configure(with video: Video) {
-//        // TODO: Configure with video thumbnail and views count
-//        if let thumbnailUrl = URL(string: video.thumbnailPath) {
-//            // Load thumbnail image
-//        }
-//        viewsLabel.text = "\(video.viewsCount) views"
-//    }
-//    
-//    override func prepareForReuse() {
-//        super.prepareForReuse()
-//        thumbnailImageView.image = nil
-//        viewsLabel.text = nil
-//    }
-//}
+
+// MARK: - UIViewControllerTransitioningDelegate
+extension PublicProfileViewController: UIViewControllerTransitioningDelegate {
+    func animationController(forPresented presented: UIViewController, presenting: UIViewController, source: UIViewController) -> UIViewControllerAnimatedTransitioning? {
+        transition.isPresenting = true
+        return transition
+    }
+    
+    func animationController(forDismissed dismissed: UIViewController) -> UIViewControllerAnimatedTransitioning? {
+        transition.isPresenting = false
+        return transition
+    }
+}

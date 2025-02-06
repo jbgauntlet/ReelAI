@@ -27,12 +27,12 @@ class HorizontalCoverTransition: NSObject, UIViewControllerAnimatedTransitioning
             print("fromViewController: " + fromViewController.description)
             
             // Presenting (forward transition)
-            toView.frame = CGRect(x: -screenWidth, y: 0, width: screenWidth, height: containerView.bounds.height)
+            toView.frame = CGRect(x: screenWidth, y: 0, width: screenWidth, height: containerView.bounds.height)
             containerView.addSubview(toView)
             
             UIView.animate(withDuration: transitionDuration(using: transitionContext), animations: {
                 fromViewController.view.alpha = 0.5 // Optional: Dim the underlying view
-                toView.frame = containerView.bounds // Slide in toView from the left
+                toView.frame = containerView.bounds // Slide in toView from the right
             }, completion: { finished in
                 transitionContext.completeTransition(finished)
             })
@@ -44,7 +44,7 @@ class HorizontalCoverTransition: NSObject, UIViewControllerAnimatedTransitioning
             // Dismissing (backward transition)
             
             UIView.animate(withDuration: transitionDuration(using: transitionContext), animations: {
-                fromViewController.view.frame = CGRect(x: -screenWidth, y: 0, width: screenWidth, height: containerView.bounds.height) // Slide out to the left
+                fromViewController.view.frame = CGRect(x: screenWidth, y: 0, width: screenWidth, height: containerView.bounds.height) // Slide out to the right
                 toView.alpha = 1.0 // Restore the alpha of the toView
             }, completion: { finished in
                 fromViewController.view.removeFromSuperview() // Remove the fromView from the hierarchy

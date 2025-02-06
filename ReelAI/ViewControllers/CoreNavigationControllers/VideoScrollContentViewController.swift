@@ -1191,10 +1191,11 @@ extension VideoScrollContentViewController: UICollectionViewDataSource, UICollec
 
 extension VideoScrollContentViewController: FullScreenVideoCellDelegate {
     func didTapCreatorAvatar(for video: Video) {
-        // Navigate to creator's profile
         let profileVC = PublicProfileViewController()
         profileVC.userId = video.creatorId
-        navigationController?.pushViewController(profileVC, animated: true)
+        profileVC.modalPresentationStyle = .fullScreen
+        profileVC.transitioningDelegate = profileVC
+        present(profileVC, animated: true)
     }
     
     func didTapLike(for video: Video) {
