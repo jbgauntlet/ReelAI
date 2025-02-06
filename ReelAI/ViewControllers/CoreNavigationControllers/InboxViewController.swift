@@ -2,7 +2,7 @@ import UIKit
 import FirebaseAuth
 import FirebaseFirestore
 
-class HomeViewController: UIViewController {
+class InboxViewController: UIViewController {
     
     private let userInfoLabel: UILabel = {
         let label = UILabel()

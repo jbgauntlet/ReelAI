@@ -55,7 +55,7 @@ class AuthenticationModalViewController: UIViewController {
     }
     
     private func setupContent() {
-        bar.backgroundColor = ColorPalette.midnightBlue
+        bar.backgroundColor = .black
         bar.layer.cornerRadius = barHeight / 2
         bar.translatesAutoresizingMaskIntoConstraints = false
         modalView.addSubview(bar)

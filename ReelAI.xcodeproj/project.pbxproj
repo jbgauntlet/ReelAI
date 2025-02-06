@@ -14,15 +14,13 @@
 		042273022C58573D00A92F9A /* Base in Resources */ = {isa = PBXBuildFile; fileRef = 042273012C58573D00A92F9A /* Base */; };
 		0422732A2C58590100A92F9A /* UploadViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 042273212C58590100A92F9A /* UploadViewController.swift */; };
 		0422732B2C58590100A92F9A /* MainTabBarController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 042273222C58590100A92F9A /* MainTabBarController.swift */; };
-		0422732D2C58590100A92F9A /* HomeViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 042273242C58590100A92F9A /* HomeViewController.swift */; };
+		0422732D2C58590100A92F9A /* InboxViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 042273242C58590100A92F9A /* InboxViewController.swift */; };
 		0422732E2C58590100A92F9A /* ProfileViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 042273252C58590100A92F9A /* ProfileViewController.swift */; };
 		0422732F2C58590100A92F9A /* VideoScrollContentViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 042273262C58590100A92F9A /* VideoScrollContentViewController.swift */; };
 		042273342C58595F00A92F9A /* SplashScreenViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 042273332C58595F00A92F9A /* SplashScreenViewController.swift */; };
 		042273362C58598800A92F9A /* Extensions.swift in Sources */ = {isa = PBXBuildFile; fileRef = 042273352C58598800A92F9A /* Extensions.swift */; };
-		0422735F2C59A1AE00A92F9A /* ColorPalette.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0422735E2C59A1AE00A92F9A /* ColorPalette.swift */; };
 		042273672C5D68F100A92F9A /* GlobalDataManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 042273662C5D68F100A92F9A /* GlobalDataManager.swift */; };
 		0422737F2C5DA7DA00A92F9A /* PaddedTextField.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0422737E2C5DA7DA00A92F9A /* PaddedTextField.swift */; };
-		045537BD2C8C835D0067603F /* TestModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 045537BC2C8C835D0067603F /* TestModel.swift */; };
 		045B7C322C74A3C700AD5FF7 /* KeychainUtils.swift in Sources */ = {isa = PBXBuildFile; fileRef = 045B7C312C74A3C700AD5FF7 /* KeychainUtils.swift */; };
 		04A12AE02C7993420056120C /* DimmingPresentationController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 04A12ADF2C7993420056120C /* DimmingPresentationController.swift */; };
 		04BA85662C7D122300992B36 /* CommonUtils.swift in Sources */ = {isa = PBXBuildFile; fileRef = 04BA85652C7D122300992B36 /* CommonUtils.swift */; };
@@ -40,6 +38,7 @@
 		6F216C332D53D097000ED151 /* EditAvatarOptionsViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6F216C322D53D097000ED151 /* EditAvatarOptionsViewController.swift */; };
 		6F216C352D53D906000ED151 /* FieldType.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6F216C342D53D906000ED151 /* FieldType.swift */; };
 		6F216C372D53F357000ED151 /* ProfileListsViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6F216C362D53F357000ED151 /* ProfileListsViewController.swift */; };
+		6F35440C2D54617400B83129 /* ColorPalette.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6F35440B2D54617400B83129 /* ColorPalette.swift */; };
 		6FC41CA52D512CD7003849BC /* User.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6FC41CA42D512CD7003849BC /* User.swift */; };
 		6FC41CB42D5144DF003849BC /* GoogleService-Info.plist in Resources */ = {isa = PBXBuildFile; fileRef = 6FC41CB32D5144DF003849BC /* GoogleService-Info.plist */; };
 		6FC41CB72D5146DF003849BC /* FirebaseAnalytics in Frameworks */ = {isa = PBXBuildFile; productRef = 6FC41CB62D5146DF003849BC /* FirebaseAnalytics */; };
@@ -86,15 +85,13 @@
 		042273032C58573D00A92F9A /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		042273212C58590100A92F9A /* UploadViewController.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = UploadViewController.swift; sourceTree = "<group>"; };
 		042273222C58590100A92F9A /* MainTabBarController.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = MainTabBarController.swift; sourceTree = "<group>"; };
-		042273242C58590100A92F9A /* HomeViewController.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = HomeViewController.swift; sourceTree = "<group>"; };
+		042273242C58590100A92F9A /* InboxViewController.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = InboxViewController.swift; sourceTree = "<group>"; };
 		042273252C58590100A92F9A /* ProfileViewController.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ProfileViewController.swift; sourceTree = "<group>"; };
 		042273262C58590100A92F9A /* VideoScrollContentViewController.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = VideoScrollContentViewController.swift; sourceTree = "<group>"; };
 		042273332C58595F00A92F9A /* SplashScreenViewController.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = SplashScreenViewController.swift; sourceTree = "<group>"; };
 		042273352C58598800A92F9A /* Extensions.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = Extensions.swift; sourceTree = "<group>"; };
-		0422735E2C59A1AE00A92F9A /* ColorPalette.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ColorPalette.swift; sourceTree = "<group>"; };
 		042273662C5D68F100A92F9A /* GlobalDataManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GlobalDataManager.swift; sourceTree = "<group>"; };
 		0422737E2C5DA7DA00A92F9A /* PaddedTextField.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PaddedTextField.swift; sourceTree = "<group>"; };
-		045537BC2C8C835D0067603F /* TestModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TestModel.swift; sourceTree = "<group>"; };
 		045B7C312C74A3C700AD5FF7 /* KeychainUtils.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KeychainUtils.swift; sourceTree = "<group>"; };
 		04A12ADF2C7993420056120C /* DimmingPresentationController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DimmingPresentationController.swift; sourceTree = "<group>"; };
 		04BA85652C7D122300992B36 /* CommonUtils.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CommonUtils.swift; sourceTree = "<group>"; };
@@ -111,6 +108,7 @@
 		6F216C322D53D097000ED151 /* EditAvatarOptionsViewController.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = EditAvatarOptionsViewController.swift; sourceTree = "<group>"; };
 		6F216C342D53D906000ED151 /* FieldType.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = FieldType.swift; sourceTree = "<group>"; };
 		6F216C362D53F357000ED151 /* ProfileListsViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProfileListsViewController.swift; sourceTree = "<group>"; };
+		6F35440B2D54617400B83129 /* ColorPalette.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ColorPalette.swift; sourceTree = "<group>"; };
 		6FC41CA42D512CD7003849BC /* User.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = User.swift; sourceTree = "<group>"; };
 		6FC41CB32D5144DF003849BC /* GoogleService-Info.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; path = "GoogleService-Info.plist"; sourceTree = "<group>"; };
 		6FC69C7A2D5205830020CF09 /* Video.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; name = Video.swift; path = ReelAI/Models/Video.swift; sourceTree = SOURCE_ROOT; };
@@ -207,7 +205,6 @@
 			children = (
 				6F216C342D53D906000ED151 /* FieldType.swift */,
 				6FC69C7A2D5205830020CF09 /* Video.swift */,
-				045537BC2C8C835D0067603F /* TestModel.swift */,
 				6FC41CA42D512CD7003849BC /* User.swift */,
 				6FC69C892D52AA1C0020CF09 /* Comment.swift */,
 			);
@@ -237,11 +234,11 @@
 			isa = PBXGroup;
 			children = (
 				042273352C58598800A92F9A /* Extensions.swift */,
-				0422735E2C59A1AE00A92F9A /* ColorPalette.swift */,
 				0422737E2C5DA7DA00A92F9A /* PaddedTextField.swift */,
 				04FB121B2C70C65E00A1C209 /* CustomView.swift */,
 				04FB122B2C716D9700A1C209 /* HorizontalCoverTransition.swift */,
 				045B7C312C74A3C700AD5FF7 /* KeychainUtils.swift */,
+				6F35440B2D54617400B83129 /* ColorPalette.swift */,
 				04A12ADF2C7993420056120C /* DimmingPresentationController.swift */,
 				04BA85652C7D122300992B36 /* CommonUtils.swift */,
 			);
@@ -286,7 +283,7 @@
 				042273262C58590100A92F9A /* VideoScrollContentViewController.swift */,
 				042273252C58590100A92F9A /* ProfileViewController.swift */,
 				04FB120A2C7081DC00A1C209 /* FriendsViewController.swift */,
-				042273242C58590100A92F9A /* HomeViewController.swift */,
+				042273242C58590100A92F9A /* InboxViewController.swift */,
 				04D47C8B2C90758A00D5DB43 /* LeftAlignedFlowLayout.swift */,
 				6FC69C822D5272AC0020CF09 /* EditProfileItemViewController.swift */,
 				6FC69C872D52A67A0020CF09 /* CommentsViewController.swift */,
@@ -416,7 +413,6 @@
 			buildActionMask = 2147483647;
 			files = (
 				6FC69C812D526DFE0020CF09 /* EditProfileViewController.swift in Sources */,
-				045537BD2C8C835D0067603F /* TestModel.swift in Sources */,
 				04D47C9E2CA53BC500D5DB43 /* AuthenticationModalViewController.swift in Sources */,
 				04FB12132C70BA4B00A1C209 /* VerifyAccountViewController.swift in Sources */,
 				04BA85662C7D122300992B36 /* CommonUtils.swift in Sources */,
@@ -427,6 +423,7 @@
 				6F216C352D53D906000ED151 /* FieldType.swift in Sources */,
 				6FC69C882D52A67A0020CF09 /* CommentsViewController.swift in Sources */,
 				04FB121C2C70C65E00A1C209 /* CustomView.swift in Sources */,
+				6F35440C2D54617400B83129 /* ColorPalette.swift in Sources */,
 				6FC69C902D52CE8A0020CF09 /* VideoScrollFeedViewController.swift in Sources */,
 				0422737F2C5DA7DA00A92F9A /* PaddedTextField.swift in Sources */,
 				0422732F2C58590100A92F9A /* VideoScrollContentViewController.swift in Sources */,
@@ -437,7 +434,6 @@
 				042273342C58595F00A92F9A /* SplashScreenViewController.swift in Sources */,
 				6FC41CA52D512CD7003849BC /* User.swift in Sources */,
 				04FB122C2C716D9700A1C209 /* HorizontalCoverTransition.swift in Sources */,
-				0422735F2C59A1AE00A92F9A /* ColorPalette.swift in Sources */,
 				0422732E2C58590100A92F9A /* ProfileViewController.swift in Sources */,
 				6FC69C832D5272AC0020CF09 /* EditProfileItemViewController.swift in Sources */,
 				0422732B2C58590100A92F9A /* MainTabBarController.swift in Sources */,
@@ -450,7 +446,7 @@
 				04A12AE02C7993420056120C /* DimmingPresentationController.swift in Sources */,
 				6FC69C8C2D52C1170020CF09 /* PublicProfileViewController.swift in Sources */,
 				042272F82C58573C00A92F9A /* SceneDelegate.swift in Sources */,
-				0422732D2C58590100A92F9A /* HomeViewController.swift in Sources */,
+				0422732D2C58590100A92F9A /* InboxViewController.swift in Sources */,
 				04D47C8C2C90758A00D5DB43 /* LeftAlignedFlowLayout.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;

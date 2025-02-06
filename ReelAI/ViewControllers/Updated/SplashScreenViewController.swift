@@ -50,14 +50,14 @@ class SplashScreenViewController: UIViewController {
     }
     
     func setupContent() {
-        let logoImageHeight = safeAreaDifference / 6
-        let logoImage = UIImage(named: "logo")?.resizeWithHeight(to: logoImageHeight)
-        let logoImageWidth = logoImage?.size.width ?? 0
+        let logoImageWidth = view.bounds.width * 0.75
+        let logoImage = UIImage(named: "splash-logo")?.resizeWithWidth(to: logoImageWidth)
+        let logoImageHeight = logoImage?.size.height ?? 0
         logoImageView = UIImageView(image: logoImage)
         logoImageView.translatesAutoresizingMaskIntoConstraints = false
         topView.addSubview(logoImageView)
 
-        tagline.text = "Sign up to join millions users sharing and ..."
+        tagline.text = "Unleash your creativity and connect through endless reels!"
         tagline.font = UIFont.systemFont(ofSize: 18)
         tagline.textColor = .black
         tagline.numberOfLines = 0

@@ -20,25 +20,24 @@ class MainTabBarController: UIViewController {
         navigationController?.navigationBar.isHidden = true
         
         // Initialize the view controllers with their respective navigation controllers and tab bar items
-        let homeVC = UINavigationController(rootViewController: HomeViewController())
-        homeVC.tabBarItem = UITabBarItem(title: "Home", image: UIImage(systemName: "house"), selectedImage: UIImage(systemName: "house.fill"))
-        homeVC.tabBarItem.tag = 0
+        let homeVC = UINavigationController(rootViewController: VideoScrollContentViewController())
+        homeVC.tabBarItem = UITabBarItem(title: "Home", image: UIImage(systemName: "house"), selectedImage: UIImage(systemName: "house.fill"));
+        homeVC.tabBarItem.tag = 0;
         
         let friendsVC = UINavigationController(rootViewController: ProfileListsViewController())
         friendsVC.tabBarItem = UITabBarItem(title: "Friends", image: UIImage(systemName: "person.2"), selectedImage: UIImage(systemName: "person.2.fill"))
-        friendsVC.tabBarItem.tag = 1
+        friendsVC.tabBarItem.tag = 1;
         
-        let videoFeedVC = UINavigationController(rootViewController: VideoScrollContentViewController())
-        videoFeedVC.tabBarItem = UITabBarItem(title: "", image: UIImage(systemName: "plus.circle.fill"), selectedImage: UIImage(systemName: "plus.circle.fill"))
-        videoFeedVC.tabBarItem.tag = 2
+        let videoFeedVC = UINavigationController(rootViewController: UploadViewController())
+        videoFeedVC.tabBarItem = UITabBarItem(title: "", image: UIImage(named: "create-video"), tag: 2)
         
-        let uploadVC = UINavigationController(rootViewController: UploadViewController())
-        uploadVC.tabBarItem = UITabBarItem(title: "Upload", image: UIImage(systemName: "video.badge.plus"), selectedImage: UIImage(systemName: "video.badge.plus.fill"))
-        uploadVC.tabBarItem.tag = 3
+        let uploadVC = UINavigationController(rootViewController: InboxViewController())
+        uploadVC.tabBarItem = UITabBarItem(title: "Inbox", image: UIImage(systemName: "bubble"), selectedImage: UIImage(systemName: "bubble.fill"))
+        uploadVC.tabBarItem.tag = 3;
         
         let profileVC = UINavigationController(rootViewController: ProfileViewController())
         profileVC.tabBarItem = UITabBarItem(title: "Profile", image: UIImage(systemName: "person"), selectedImage: UIImage(systemName: "person.fill"))
-        profileVC.tabBarItem.tag = 4
+        profileVC.tabBarItem.tag = 4;
         
         viewControllers = [homeVC, friendsVC, videoFeedVC, uploadVC, profileVC]
         
@@ -71,14 +70,14 @@ class MainTabBarController: UIViewController {
             
             if index == 2 {
                 // Customize the middle button (e.g., larger size, no title)
-                let image = viewController.tabBarItem.image?.withRenderingMode(.alwaysOriginal).withTintColor(.black)
-                let resizedImage = image!.resized(to: CGSize(width: 50, height: 50))
-                
+                let image = viewController.tabBarItem.image?.withRenderingMode(.alwaysOriginal)
+                let resizedImage = image!.resizeWithWidth(to: 50)
                 buttons[index].setImage(resizedImage, for: .normal)
-                buttons[index].setImage(viewController.tabBarItem.selectedImage, for: .selected)
+                buttons[index].layer.cornerRadius = 20
             } else {
                 // Customize other buttons
                 let image = viewController.tabBarItem.image?.withRenderingMode(.alwaysOriginal).withTintColor(ColorPalette.gray)
+                let filledImage = viewController.tabBarItem.selectedImage?.withRenderingMode(.alwaysOriginal).withTintColor(.black)
                 
                 // Scale to keep aspect ratio
                 let size = image?.size
@@ -88,7 +87,8 @@ class MainTabBarController: UIViewController {
                 let newWidth = oldWidth! * scaleFactor
                 
                 let resizedImage = image!.resized(to: CGSize(width: newWidth, height: 25))
-                let selectedImage = viewController.tabBarItem.selectedImage?.withRenderingMode(.alwaysOriginal).withTintColor(.black)
+                let selectedImage = filledImage?.resizeWithHeight(to: 25)
+                
                 buttons[index].setImage(resizedImage, for: .normal)
                 buttons[index].setImage(selectedImage, for: .selected)
             }
@@ -134,7 +134,7 @@ class MainTabBarController: UIViewController {
         ])
         
         // Configure labels for non-middle buttons
-        let labelConfigs = [("Home", views[0]), ("Friends", views[1]), ("", UIView()), ("Upload", views[3]), ("Profile", views[4])]
+        let labelConfigs = [("Home", views[0]), ("Friends", views[1]), ("", UIView()), ("Messages", views[3]), ("Profile", views[4])]
         
         for (index, config) in labelConfigs.enumerated() {
             if index == 2 { continue }
@@ -203,8 +203,6 @@ class MainTabBarController: UIViewController {
             return
         }
         
-        print("Selecting tab at index: \(index)")
-        
         // Remove the current view controller's view
         let currentVC = viewControllers[selectedIndex]
         currentVC.view.removeFromSuperview()
@@ -220,18 +218,8 @@ class MainTabBarController: UIViewController {
         view.insertSubview(selectedVC.view, belowSubview: tabBarView)
         
         // Update the selected button state and label colors
-        print("Deselecting tab at index: \(selectedIndex)")
         buttons[selectedIndex].isSelected = false
-        let originalImage = viewControllers[selectedIndex].tabBarItem.image?.withRenderingMode(.alwaysOriginal).withTintColor(ColorPalette.gray)
-        print("Setting original image for deselected tab: \(String(describing: originalImage))")
-        buttons[selectedIndex].setImage(originalImage, for: .normal)
-
-        print("Selecting tab at index: \(index)")
         buttons[index].isSelected = true
-        let filledImage = viewControllers[index].tabBarItem.selectedImage?.withRenderingMode(.alwaysOriginal).withTintColor(.black)
-        print("Setting filled image for selected tab: \(String(describing: filledImage))")
-        buttons[index].setImage(filledImage, for: .normal)
-
         labels[selectedIndex].textColor = ColorPalette.gray
         labels[index].textColor = .black
         

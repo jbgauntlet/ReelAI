@@ -123,7 +123,7 @@ class ProfileListsViewController : UIViewController {
     
     // MARK: - Setup
     private func setupUI() {
-        view.backgroundColor = UIColor(hex: "#F6F7F9")
+        view.backgroundColor = .white
         
         view.addSubview(backButton)
         view.addSubview(usernameLabel)
