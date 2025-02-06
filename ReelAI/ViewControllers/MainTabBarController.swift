@@ -24,7 +24,7 @@ class MainTabBarController: UIViewController {
         homeVC.tabBarItem = UITabBarItem(title: "Home", image: UIImage(systemName: "house"), selectedImage: UIImage(systemName: "house.fill"));
         homeVC.tabBarItem.tag = 0;
         
-        let friendsVC = UINavigationController(rootViewController: ProfileListsViewController())
+        let friendsVC = UINavigationController(rootViewController: LivestreamViewController())
         friendsVC.tabBarItem = UITabBarItem(title: "Friends", image: UIImage(systemName: "person.2"), selectedImage: UIImage(systemName: "person.2.fill"))
         friendsVC.tabBarItem.tag = 1;
         
