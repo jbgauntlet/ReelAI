@@ -28,13 +28,6 @@ class ProfileViewController: UIViewController {
     private var videos: [Video] = []
     
     // MARK: - UI Components
-    private let scrollView: UIScrollView = {
-        let sv = UIScrollView()
-        sv.showsVerticalScrollIndicator = false
-        sv.translatesAutoresizingMaskIntoConstraints = false
-        return sv
-    }()
-    
     private let contentView: UIView = {
         let view = UIView()
         view.translatesAutoresizingMaskIntoConstraints = false
@@ -162,7 +155,10 @@ class ProfileViewController: UIViewController {
     }()
     
     private let sectionSelector: UISegmentedControl = {
-        let sc = UISegmentedControl(items: VideoSection.allCases.map { $0.title })
+        let sc = UISegmentedControl()
+        VideoSection.allCases.enumerated().forEach { index, section in
+            sc.insertSegment(withTitle: section.title, at: index, animated: false)
+        }
         sc.selectedSegmentIndex = 0
         sc.translatesAutoresizingMaskIntoConstraints = false
         return sc
@@ -170,13 +166,15 @@ class ProfileViewController: UIViewController {
     
     private let videoCollectionView: UICollectionView = {
         let layout = UICollectionViewFlowLayout()
-        layout.minimumInteritemSpacing = 1
-        layout.minimumLineSpacing = 1
+        layout.minimumInteritemSpacing = 0  // No spacing between items in the same row
+        layout.minimumLineSpacing = 0       // No spacing between rows
+        layout.sectionInset = .zero         // No section insets
         
         let cv = UICollectionView(frame: .zero, collectionViewLayout: layout)
         cv.backgroundColor = .systemBackground
         cv.register(ProfileVideoThumbnailCell.self, forCellWithReuseIdentifier: "ProfileVideoThumbnailCell")
         cv.translatesAutoresizingMaskIntoConstraints = false
+        cv.alwaysBounceVertical = true
         return cv
     }()
     
@@ -203,19 +201,21 @@ class ProfileViewController: UIViewController {
     private func setupUI() {
         view.backgroundColor = .systemBackground
         
-        view.addSubview(scrollView)
-        scrollView.addSubview(contentView)
+        // Remove scrollView and add contentView directly to main view
+        view.addSubview(contentView)
         
         contentView.addSubview(avatarImageView)
         contentView.addSubview(nameLabel)
         contentView.addSubview(statsStackView)
         
-        // Add stat views
+        // Add stat views first
         ["Following", "Followers", "Likes"].forEach { title in
             statsStackView.addArrangedSubview(createStatView(title: title))
         }
         
         contentView.addSubview(buttonStackView)
+        
+        // Add buttons to button stack view
         buttonStackView.addArrangedSubview(editProfileButton)
         buttonStackView.addArrangedSubview(shareProfileButton)
         buttonStackView.addArrangedSubview(addFriendButton)
@@ -225,26 +225,27 @@ class ProfileViewController: UIViewController {
         contentView.addSubview(sectionSelector)
         contentView.addSubview(videoCollectionView)
         
+        // Setup section selector
+        sectionSelector.selectedSegmentIndex = 0
+        sectionSelector.removeAllSegments()
+        VideoSection.allCases.enumerated().forEach { index, section in
+            sectionSelector.insertSegment(withTitle: section.title, at: index, animated: false)
+        }
+        sectionSelector.selectedSegmentIndex = 0
+        
         view.addSubview(optionsButton)
         
         videoCollectionView.delegate = self
         videoCollectionView.dataSource = self
-    }
-    
-    private func setupConstraints() {
+        
         let padding: CGFloat = 16
+        let tabBarHeight: CGFloat = 90 // Match MainTabBarController's tab bar height
         
         NSLayoutConstraint.activate([
-            scrollView.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor),
-            scrollView.leadingAnchor.constraint(equalTo: view.leadingAnchor),
-            scrollView.trailingAnchor.constraint(equalTo: view.trailingAnchor),
-            scrollView.bottomAnchor.constraint(equalTo: view.bottomAnchor),
-            
-            contentView.topAnchor.constraint(equalTo: scrollView.topAnchor),
-            contentView.leadingAnchor.constraint(equalTo: scrollView.leadingAnchor),
-            contentView.trailingAnchor.constraint(equalTo: scrollView.trailingAnchor),
-            contentView.bottomAnchor.constraint(equalTo: scrollView.bottomAnchor),
-            contentView.widthAnchor.constraint(equalTo: scrollView.widthAnchor),
+            contentView.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor),
+            contentView.leadingAnchor.constraint(equalTo: view.leadingAnchor),
+            contentView.trailingAnchor.constraint(equalTo: view.trailingAnchor),
+            contentView.bottomAnchor.constraint(equalTo: view.bottomAnchor),
             
             avatarImageView.topAnchor.constraint(equalTo: contentView.topAnchor, constant: padding),
             avatarImageView.centerXAnchor.constraint(equalTo: contentView.centerXAnchor),
@@ -276,14 +277,17 @@ class ProfileViewController: UIViewController {
             videoCollectionView.topAnchor.constraint(equalTo: sectionSelector.bottomAnchor, constant: padding),
             videoCollectionView.leadingAnchor.constraint(equalTo: contentView.leadingAnchor),
             videoCollectionView.trailingAnchor.constraint(equalTo: contentView.trailingAnchor),
-            videoCollectionView.bottomAnchor.constraint(equalTo: contentView.bottomAnchor),
-            videoCollectionView.heightAnchor.constraint(equalTo: view.heightAnchor, multiplier: 0.5),
+            videoCollectionView.bottomAnchor.constraint(equalTo: view.bottomAnchor),
             
             optionsButton.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor, constant: 0),
             optionsButton.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -16),
             optionsButton.widthAnchor.constraint(equalToConstant: 44),
             optionsButton.heightAnchor.constraint(equalToConstant: 44)
         ])
+    }
+    
+    private func setupConstraints() {
+        // No additional constraints needed as setupUI handles all constraints
     }
     
     private func setupActions() {
@@ -633,24 +637,41 @@ class ProfileViewController: UIViewController {
     }
 }
 
-// MARK: - UICollectionView Delegate & DataSource
-extension ProfileViewController: UICollectionViewDelegate, UICollectionViewDataSource, UICollectionViewDelegateFlowLayout {
+// MARK: - UICollectionView DataSource & Delegate
+extension ProfileViewController: UICollectionViewDataSource, UICollectionViewDelegate, UICollectionViewDelegateFlowLayout {
     func collectionView(_ collectionView: UICollectionView, numberOfItemsInSection section: Int) -> Int {
         return videos.count
     }
     
     func collectionView(_ collectionView: UICollectionView, cellForItemAt indexPath: IndexPath) -> UICollectionViewCell {
-        let cell = collectionView.dequeueReusableCell(withReuseIdentifier: "ProfileVideoThumbnailCell", for: indexPath) as! ProfileVideoThumbnailCell
-        cell.configure(with: videos[indexPath.item])
+        guard indexPath.item < videos.count,
+              let cell = collectionView.dequeueReusableCell(withReuseIdentifier: "ProfileVideoThumbnailCell", for: indexPath) as? ProfileVideoThumbnailCell else {
+            return UICollectionViewCell()
+        }
+        
+        let video = videos[indexPath.item]
+        cell.configure(with: video)
         return cell
     }
     
     func collectionView(_ collectionView: UICollectionView, layout collectionViewLayout: UICollectionViewLayout, sizeForItemAt indexPath: IndexPath) -> CGSize {
-        let width = (collectionView.bounds.width - 2) / 3 // 2 is total spacing between items
-        return CGSize(width: width, height: width * 16/9)
+        let totalWidth = collectionView.bounds.width
+        let itemWidth = totalWidth / 3  // Exactly three items per row
+        let itemHeight = itemWidth * 16/9  // Maintain 16:9 aspect ratio
+        return CGSize(width: itemWidth, height: itemHeight)
+    }
+    
+    func collectionView(_ collectionView: UICollectionView, layout collectionViewLayout: UICollectionViewLayout, minimumInteritemSpacingForSectionAt section: Int) -> CGFloat {
+        return 0  // No spacing between items in the same row
+    }
+    
+    func collectionView(_ collectionView: UICollectionView, layout collectionViewLayout: UICollectionViewLayout, minimumLineSpacingForSectionAt section: Int) -> CGFloat {
+        return 0  // No spacing between rows
     }
     
     func collectionView(_ collectionView: UICollectionView, didSelectItemAt indexPath: IndexPath) {
+        guard indexPath.item < videos.count else { return }
+        
         let videoScrollFeedVC = VideoScrollFeedViewController(videos: videos, startingIndex: indexPath.item)
         videoScrollFeedVC.modalPresentationStyle = .fullScreen
         present(videoScrollFeedVC, animated: true)

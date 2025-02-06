@@ -42,6 +42,7 @@
 		6F35440E2D54C5C800B83129 /* ProfileOptionsViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6F35440D2D54C5C800B83129 /* ProfileOptionsViewController.swift */; };
 		6F3544102D54FF6900B83129 /* PostVideoViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6F35440F2D54FF6900B83129 /* PostVideoViewController.swift */; };
 		6F3544122D5509C400B83129 /* LivestreamViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6F3544112D5509C400B83129 /* LivestreamViewController.swift */; };
+		6FB758CB2D5545FE00ECB2C6 /* InboxViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6FB758CA2D5545FE00ECB2C6 /* InboxViewController.swift */; };
 		6FC41CA52D512CD7003849BC /* User.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6FC41CA42D512CD7003849BC /* User.swift */; };
 		6FC41CB42D5144DF003849BC /* GoogleService-Info.plist in Resources */ = {isa = PBXBuildFile; fileRef = 6FC41CB32D5144DF003849BC /* GoogleService-Info.plist */; };
 		6FC41CB72D5146DF003849BC /* FirebaseAnalytics in Frameworks */ = {isa = PBXBuildFile; productRef = 6FC41CB62D5146DF003849BC /* FirebaseAnalytics */; };
@@ -115,6 +116,7 @@
 		6F35440D2D54C5C800B83129 /* ProfileOptionsViewController.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ProfileOptionsViewController.swift; sourceTree = "<group>"; };
 		6F35440F2D54FF6900B83129 /* PostVideoViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PostVideoViewController.swift; sourceTree = "<group>"; };
 		6F3544112D5509C400B83129 /* LivestreamViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LivestreamViewController.swift; sourceTree = "<group>"; };
+		6FB758CA2D5545FE00ECB2C6 /* InboxViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InboxViewController.swift; sourceTree = "<group>"; };
 		6FC41CA42D512CD7003849BC /* User.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = User.swift; sourceTree = "<group>"; };
 		6FC41CB32D5144DF003849BC /* GoogleService-Info.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; path = "GoogleService-Info.plist"; sourceTree = "<group>"; };
 		6FC69C7A2D5205830020CF09 /* Video.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; name = Video.swift; path = ReelAI/Models/Video.swift; sourceTree = SOURCE_ROOT; };
@@ -299,6 +301,7 @@
 				6F216C362D53F357000ED151 /* ProfileListsViewController.swift */,
 				6F35440F2D54FF6900B83129 /* PostVideoViewController.swift */,
 				6F3544112D5509C400B83129 /* LivestreamViewController.swift */,
+				6FB758CA2D5545FE00ECB2C6 /* InboxViewController.swift */,
 			);
 			path = CoreNavigationControllers;
 			sourceTree = "<group>";
@@ -456,6 +459,7 @@
 				04FB122A2C70F13A00A1C209 /* SignInViewController.swift in Sources */,
 				6FC69C8A2D52AA1C0020CF09 /* Comment.swift in Sources */,
 				04A12AE02C7993420056120C /* DimmingPresentationController.swift in Sources */,
+				6FB758CB2D5545FE00ECB2C6 /* InboxViewController.swift in Sources */,
 				6FC69C8C2D52C1170020CF09 /* PublicProfileViewController.swift in Sources */,
 				042272F82C58573C00A92F9A /* SceneDelegate.swift in Sources */,
 				0422732D2C58590100A92F9A /* CameraViewController.swift in Sources */,
