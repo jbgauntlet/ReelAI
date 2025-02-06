@@ -46,6 +46,11 @@
 		6FB758CE2D55694100ECB2C6 /* NotificationCell.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6FB758CC2D55694100ECB2C6 /* NotificationCell.swift */; };
 		6FB758CF2D55694100ECB2C6 /* FriendRequestCell.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6FB758CD2D55694100ECB2C6 /* FriendRequestCell.swift */; };
 		6FB758D12D55696500ECB2C6 /* Notification.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6FB758D02D55696500ECB2C6 /* Notification.swift */; };
+		6FB758D32D55757B00ECB2C6 /* AddFriendViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6FB758D22D55757B00ECB2C6 /* AddFriendViewController.swift */; };
+		6FB758D62D5575B700ECB2C6 /* UserSearchCell.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6FB758D42D5575B700ECB2C6 /* UserSearchCell.swift */; };
+		6FB758D82D5575D600ECB2C6 /* UserSearchResultsViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6FB758D72D5575D600ECB2C6 /* UserSearchResultsViewController.swift */; };
+		6FB758DC2D55792700ECB2C6 /* SDWebImage in Frameworks */ = {isa = PBXBuildFile; productRef = 6FB758DB2D55792700ECB2C6 /* SDWebImage */; };
+		6FB758DE2D55792700ECB2C6 /* SDWebImageMapKit in Frameworks */ = {isa = PBXBuildFile; productRef = 6FB758DD2D55792700ECB2C6 /* SDWebImageMapKit */; };
 		6FC41CA52D512CD7003849BC /* User.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6FC41CA42D512CD7003849BC /* User.swift */; };
 		6FC41CB42D5144DF003849BC /* GoogleService-Info.plist in Resources */ = {isa = PBXBuildFile; fileRef = 6FC41CB32D5144DF003849BC /* GoogleService-Info.plist */; };
 		6FC41CB72D5146DF003849BC /* FirebaseAnalytics in Frameworks */ = {isa = PBXBuildFile; productRef = 6FC41CB62D5146DF003849BC /* FirebaseAnalytics */; };
@@ -123,6 +128,9 @@
 		6FB758CC2D55694100ECB2C6 /* NotificationCell.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = NotificationCell.swift; sourceTree = "<group>"; };
 		6FB758CD2D55694100ECB2C6 /* FriendRequestCell.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = FriendRequestCell.swift; sourceTree = "<group>"; };
 		6FB758D02D55696500ECB2C6 /* Notification.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = Notification.swift; sourceTree = "<group>"; };
+		6FB758D22D55757B00ECB2C6 /* AddFriendViewController.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = AddFriendViewController.swift; sourceTree = "<group>"; };
+		6FB758D42D5575B700ECB2C6 /* UserSearchCell.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = UserSearchCell.swift; sourceTree = "<group>"; };
+		6FB758D72D5575D600ECB2C6 /* UserSearchResultsViewController.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = UserSearchResultsViewController.swift; sourceTree = "<group>"; };
 		6FC41CA42D512CD7003849BC /* User.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = User.swift; sourceTree = "<group>"; };
 		6FC41CB32D5144DF003849BC /* GoogleService-Info.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; path = "GoogleService-Info.plist"; sourceTree = "<group>"; };
 		6FC69C7A2D5205830020CF09 /* Video.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; name = Video.swift; path = ReelAI/Models/Video.swift; sourceTree = SOURCE_ROOT; };
@@ -142,6 +150,7 @@
 			files = (
 				6FC41CD92D5146DF003849BC /* FirebaseMessaging in Frameworks */,
 				6FC41CE52D5146DF003849BC /* FirebaseVertexAI in Frameworks */,
+				6FB758DE2D55792700ECB2C6 /* SDWebImageMapKit in Frameworks */,
 				6FC41CCF2D5146DF003849BC /* FirebaseFirestoreCombine-Community in Frameworks */,
 				6FC41CDD2D5146DF003849BC /* FirebasePerformance in Frameworks */,
 				6FC41CE32D5146DF003849BC /* FirebaseStorageCombine-Community in Frameworks */,
@@ -164,6 +173,7 @@
 				6FC41CE12D5146DF003849BC /* FirebaseStorage in Frameworks */,
 				6FC41CC52D5146DF003849BC /* FirebaseCore in Frameworks */,
 				6FC41CB92D5146DF003849BC /* FirebaseAnalyticsOnDeviceConversion in Frameworks */,
+				6FB758DC2D55792700ECB2C6 /* SDWebImage in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -292,6 +302,7 @@
 			isa = PBXGroup;
 			children = (
 				6F35440D2D54C5C800B83129 /* ProfileOptionsViewController.swift */,
+				6FB758D72D5575D600ECB2C6 /* UserSearchResultsViewController.swift */,
 				6F216C302D53BE37000ED151 /* EditAvatarViewController.swift */,
 				6F216C322D53D097000ED151 /* EditAvatarOptionsViewController.swift */,
 				6FC69C802D526DFE0020CF09 /* EditProfileViewController.swift */,
@@ -299,6 +310,7 @@
 				042273262C58590100A92F9A /* VideoScrollContentViewController.swift */,
 				042273252C58590100A92F9A /* ProfileViewController.swift */,
 				04FB120A2C7081DC00A1C209 /* FriendsViewController.swift */,
+				6FB758D22D55757B00ECB2C6 /* AddFriendViewController.swift */,
 				042273242C58590100A92F9A /* CameraViewController.swift */,
 				04D47C8B2C90758A00D5DB43 /* LeftAlignedFlowLayout.swift */,
 				6FC69C822D5272AC0020CF09 /* EditProfileItemViewController.swift */,
@@ -323,6 +335,7 @@
 		6FC69C862D52A3360020CF09 /* Views */ = {
 			isa = PBXGroup;
 			children = (
+				6FB758D42D5575B700ECB2C6 /* UserSearchCell.swift */,
 				6FB758CD2D55694100ECB2C6 /* FriendRequestCell.swift */,
 				6FB758CC2D55694100ECB2C6 /* NotificationCell.swift */,
 				6FC69C8D2D52C84E0020CF09 /* ProfileVideoThumbnailCell.swift */,
@@ -371,6 +384,8 @@
 				6FC41CE02D5146DF003849BC /* FirebaseStorage */,
 				6FC41CE22D5146DF003849BC /* FirebaseStorageCombine-Community */,
 				6FC41CE42D5146DF003849BC /* FirebaseVertexAI */,
+				6FB758DB2D55792700ECB2C6 /* SDWebImage */,
+				6FB758DD2D55792700ECB2C6 /* SDWebImageMapKit */,
 			);
 			productName = BookeeperApp;
 			productReference = 042272F22C58573C00A92F9A /* ReelAI.app */;
@@ -402,6 +417,7 @@
 			mainGroup = 042272E92C58573C00A92F9A;
 			packageReferences = (
 				6FC41CB22D514256003849BC /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */,
+				6FB758DA2D55792700ECB2C6 /* XCRemoteSwiftPackageReference "SDWebImage" */,
 			);
 			productRefGroup = 042272F32C58573C00A92F9A /* Products */;
 			projectDirPath = "";
@@ -441,6 +457,7 @@
 				0422732A2C58590100A92F9A /* UploadViewController.swift in Sources */,
 				6FC69C8E2D52C84E0020CF09 /* ProfileVideoThumbnailCell.swift in Sources */,
 				042273362C58598800A92F9A /* Extensions.swift in Sources */,
+				6FB758D32D55757B00ECB2C6 /* AddFriendViewController.swift in Sources */,
 				6F216C372D53F357000ED151 /* ProfileListsViewController.swift in Sources */,
 				6F216C352D53D906000ED151 /* FieldType.swift in Sources */,
 				6FC69C882D52A67A0020CF09 /* CommentsViewController.swift in Sources */,
@@ -456,6 +473,7 @@
 				04FB120B2C7081DC00A1C209 /* FriendsViewController.swift in Sources */,
 				6F216C332D53D097000ED151 /* EditAvatarOptionsViewController.swift in Sources */,
 				042273342C58595F00A92F9A /* SplashScreenViewController.swift in Sources */,
+				6FB758D82D5575D600ECB2C6 /* UserSearchResultsViewController.swift in Sources */,
 				6F3544122D5509C400B83129 /* LivestreamViewController.swift in Sources */,
 				6FC41CA52D512CD7003849BC /* User.swift in Sources */,
 				04FB122C2C716D9700A1C209 /* HorizontalCoverTransition.swift in Sources */,
@@ -472,6 +490,7 @@
 				04A12AE02C7993420056120C /* DimmingPresentationController.swift in Sources */,
 				6FB758CB2D5545FE00ECB2C6 /* InboxViewController.swift in Sources */,
 				6FC69C8C2D52C1170020CF09 /* PublicProfileViewController.swift in Sources */,
+				6FB758D62D5575B700ECB2C6 /* UserSearchCell.swift in Sources */,
 				6FB758D12D55696500ECB2C6 /* Notification.swift in Sources */,
 				042272F82C58573C00A92F9A /* SceneDelegate.swift in Sources */,
 				0422732D2C58590100A92F9A /* CameraViewController.swift in Sources */,
@@ -702,6 +721,14 @@
 /* End XCConfigurationList section */
 
 /* Begin XCRemoteSwiftPackageReference section */
+		6FB758DA2D55792700ECB2C6 /* XCRemoteSwiftPackageReference "SDWebImage" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/SDWebImage/SDWebImage.git";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 5.20.0;
+			};
+		};
 		6FC41CB22D514256003849BC /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */ = {
 			isa = XCRemoteSwiftPackageReference;
 			repositoryURL = "https://github.com/firebase/firebase-ios-sdk";
@@ -713,6 +740,16 @@
 /* End XCRemoteSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
+		6FB758DB2D55792700ECB2C6 /* SDWebImage */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 6FB758DA2D55792700ECB2C6 /* XCRemoteSwiftPackageReference "SDWebImage" */;
+			productName = SDWebImage;
+		};
+		6FB758DD2D55792700ECB2C6 /* SDWebImageMapKit */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 6FB758DA2D55792700ECB2C6 /* XCRemoteSwiftPackageReference "SDWebImage" */;
+			productName = SDWebImageMapKit;
+		};
 		6FC41CB62D5146DF003849BC /* FirebaseAnalytics */ = {
 			isa = XCSwiftPackageProductDependency;
 			package = 6FC41CB22D514256003849BC /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;

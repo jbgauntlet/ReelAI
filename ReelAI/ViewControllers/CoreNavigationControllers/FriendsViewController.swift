@@ -196,9 +196,8 @@ class FriendsViewController: UIViewController {
     
     // MARK: - Actions
     @objc private func handleAddFriend() {
-        let profileListsVC = ProfileListsViewController()
-        profileListsVC.initialSelectionType = .suggested
-        navigationController?.pushViewController(profileListsVC, animated: true)
+        let addFriendVC = AddFriendViewController()
+        navigationController?.pushViewController(addFriendVC, animated: true)
     }
     
     private func handleUnfriend(_ user: User) {
