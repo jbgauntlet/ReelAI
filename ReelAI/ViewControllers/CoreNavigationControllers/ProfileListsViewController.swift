@@ -53,6 +53,26 @@ class ProfileListsViewController : UIViewController {
         }
     }
     
+    var initialSelectionType: ConnectionType? {
+        didSet {
+            if isViewLoaded {
+                switch initialSelectionType {
+                case .following:
+                    segmentedControl.selectedSegmentIndex = 0
+                case .followers:
+                    segmentedControl.selectedSegmentIndex = 1
+                case .friends:
+                    segmentedControl.selectedSegmentIndex = 2
+                case .suggested:
+                    segmentedControl.selectedSegmentIndex = 3
+                case .none:
+                    break
+                }
+                updateContent()
+            }
+        }
+    }
+    
     // MARK: - UI Components
     private lazy var backButton: UIButton = {
         let button = UIButton(type: .system)
@@ -117,8 +137,16 @@ class ProfileListsViewController : UIViewController {
     // MARK: - Lifecycle
     override func viewDidLoad() {
         super.viewDidLoad()
+        // Hide navigation bar
+        navigationController?.setNavigationBarHidden(true, animated: false)
         setupUI()
         fetchCurrentUser()
+    }
+    
+    override func viewWillAppear(_ animated: Bool) {
+        super.viewWillAppear(animated)
+        // Keep navigation bar hidden when appearing
+        navigationController?.setNavigationBarHidden(true, animated: animated)
     }
     
     // MARK: - Setup

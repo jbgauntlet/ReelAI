@@ -86,6 +86,12 @@ class ProfileViewController: UIViewController {
         
         stackView.addArrangedSubview(countLabel)
         stackView.addArrangedSubview(titleLabel)
+        
+        // Make the stack view tappable
+        stackView.isUserInteractionEnabled = true
+        let tapGesture = UITapGestureRecognizer(target: self, action: #selector(statTapped(_:)))
+        stackView.addGestureRecognizer(tapGesture)
+        
         return stackView
     }
     
@@ -321,6 +327,25 @@ class ProfileViewController: UIViewController {
             }
         }
         present(optionsVC, animated: true)
+    }
+    
+    @objc private func statTapped(_ gesture: UITapGestureRecognizer) {
+        guard let stackView = gesture.view as? UIStackView,
+              let index = statsStackView.arrangedSubviews.firstIndex(of: stackView) else { return }
+        
+        let profileListsVC = ProfileListsViewController()
+        
+        // Set the initial selected segment based on which stat was tapped
+        switch index {
+        case 0: // Following
+            profileListsVC.initialSelectionType = .following
+        case 1: // Followers
+            profileListsVC.initialSelectionType = .followers
+        default:
+            return
+        }
+        
+        navigationController?.pushViewController(profileListsVC, animated: true)
     }
     
     // MARK: - Data Fetching
