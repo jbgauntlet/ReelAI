@@ -45,6 +45,15 @@ class PostVideoViewController: UIViewController {
         return button
     }()
     
+    private let backButton: UIButton = {
+        let button = UIButton(type: .system)
+        let config = UIImage.SymbolConfiguration(pointSize: 25, weight: .medium)
+        button.setImage(UIImage(systemName: "arrow.left", withConfiguration: config), for: .normal)
+        button.tintColor = .white
+        button.translatesAutoresizingMaskIntoConstraints = false
+        return button
+    }()
+    
     // MARK: - Initialization
     init(videoURL: URL) {
         self.videoURL = videoURL
@@ -75,8 +84,14 @@ class PostVideoViewController: UIViewController {
         view.addSubview(videoPreviewView)
         view.addSubview(captionTextField)
         view.addSubview(postButton)
+        view.addSubview(backButton)
         
         NSLayoutConstraint.activate([
+            backButton.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor, constant: 16),
+            backButton.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: 16),
+            backButton.widthAnchor.constraint(equalToConstant: 44),
+            backButton.heightAnchor.constraint(equalToConstant: 44),
+            
             videoPreviewView.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor),
             videoPreviewView.leadingAnchor.constraint(equalTo: view.leadingAnchor),
             videoPreviewView.trailingAnchor.constraint(equalTo: view.trailingAnchor),
@@ -94,6 +109,7 @@ class PostVideoViewController: UIViewController {
         ])
         
         postButton.addTarget(self, action: #selector(handlePost), for: .touchUpInside)
+        backButton.addTarget(self, action: #selector(handleBack), for: .touchUpInside)
     }
     
     private func setupVideo() {
@@ -121,6 +137,10 @@ class PostVideoViewController: UIViewController {
         // TODO: Implement video upload with caption
         let caption = captionTextField.text ?? ""
         print("Posting video with caption: \(caption)")
+    }
+    
+    @objc private func handleBack() {
+        navigationController?.popViewController(animated: true)
     }
     
     deinit {

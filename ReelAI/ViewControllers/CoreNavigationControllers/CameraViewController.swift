@@ -1,7 +1,8 @@
 import UIKit
 import AVFoundation
+import Photos
 
-class CameraViewController: UIViewController {
+class CameraViewController: UIViewController, UIImagePickerControllerDelegate, UINavigationControllerDelegate {
     
     // MARK: - Properties
     private var captureSession: AVCaptureSession?
@@ -68,11 +69,33 @@ class CameraViewController: UIViewController {
         return button
     }()
     
+    private let galleryButton: UIButton = {
+        let button = UIButton(type: .system)
+        let config = UIImage.SymbolConfiguration(pointSize: 20, weight: .medium)
+        button.setImage(UIImage(systemName: "video.badge.plus", withConfiguration: config), for: .normal)
+        button.backgroundColor = UIColor.black.withAlphaComponent(0.5)
+        button.layer.cornerRadius = 8  // Less rounded for square look
+        button.tintColor = .white
+        button.clipsToBounds = true
+        button.translatesAutoresizingMaskIntoConstraints = false
+        return button
+    }()
+    
+    private let galleryThumbnail: UIImageView = {
+        let imageView = UIImageView()
+        imageView.contentMode = .scaleAspectFill
+        imageView.clipsToBounds = true
+        imageView.alpha = 0.5  // Make the thumbnail more subtle
+        imageView.translatesAutoresizingMaskIntoConstraints = false
+        return imageView
+    }()
+    
     // MARK: - Lifecycle
     override func viewDidLoad() {
         super.viewDidLoad()
         setupUI()
         checkCameraPermissions()
+        loadLastVideoThumbnail()
     }
     
     override func viewWillAppear(_ animated: Bool) {
@@ -99,6 +122,8 @@ class CameraViewController: UIViewController {
         view.addSubview(closeButton)
         view.addSubview(recordingIndicator)
         view.addSubview(nextButton)
+        view.addSubview(galleryButton)
+        galleryButton.addSubview(galleryThumbnail)
         
         NSLayoutConstraint.activate([
             previewView.topAnchor.constraint(equalTo: view.topAnchor),
@@ -110,6 +135,16 @@ class CameraViewController: UIViewController {
             captureButton.bottomAnchor.constraint(equalTo: view.safeAreaLayoutGuide.bottomAnchor, constant: -30),
             captureButton.widthAnchor.constraint(equalToConstant: 70),
             captureButton.heightAnchor.constraint(equalToConstant: 70),
+            
+            galleryButton.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: 16),
+            galleryButton.centerYAnchor.constraint(equalTo: captureButton.centerYAnchor),
+            galleryButton.widthAnchor.constraint(equalToConstant: 50),
+            galleryButton.heightAnchor.constraint(equalToConstant: 50),
+            
+            galleryThumbnail.topAnchor.constraint(equalTo: galleryButton.topAnchor),
+            galleryThumbnail.leadingAnchor.constraint(equalTo: galleryButton.leadingAnchor),
+            galleryThumbnail.trailingAnchor.constraint(equalTo: galleryButton.trailingAnchor),
+            galleryThumbnail.bottomAnchor.constraint(equalTo: galleryButton.bottomAnchor),
             
             recordingIndicator.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor, constant: 16),
             recordingIndicator.centerXAnchor.constraint(equalTo: view.centerXAnchor),
@@ -126,16 +161,17 @@ class CameraViewController: UIViewController {
             closeButton.widthAnchor.constraint(equalToConstant: 44),
             closeButton.heightAnchor.constraint(equalToConstant: 44),
             
-            nextButton.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -20),
-            nextButton.bottomAnchor.constraint(equalTo: view.safeAreaLayoutGuide.bottomAnchor, constant: -30),
-            nextButton.widthAnchor.constraint(equalToConstant: 60),
-            nextButton.heightAnchor.constraint(equalToConstant: 44)
+            nextButton.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -16),
+            nextButton.centerYAnchor.constraint(equalTo: captureButton.centerYAnchor),
+            nextButton.widthAnchor.constraint(equalToConstant: 80),
+            nextButton.heightAnchor.constraint(equalToConstant: 50)
         ])
         
         captureButton.addTarget(self, action: #selector(handleCapture), for: .touchUpInside)
         flipCameraButton.addTarget(self, action: #selector(handleFlipCamera), for: .touchUpInside)
         closeButton.addTarget(self, action: #selector(handleClose), for: .touchUpInside)
         nextButton.addTarget(self, action: #selector(handleNext), for: .touchUpInside)
+        galleryButton.addTarget(self, action: #selector(handleGalleryTap), for: .touchUpInside)
     }
     
     private func checkCameraPermissions() {
@@ -232,6 +268,25 @@ class CameraViewController: UIViewController {
         session.commitConfiguration()
     }
     
+    private func loadLastVideoThumbnail() {
+        let options = PHFetchOptions()
+        options.sortDescriptors = [NSSortDescriptor(key: "creationDate", ascending: false)]
+        options.predicate = NSPredicate(format: "mediaType = %d", PHAssetMediaType.video.rawValue)
+        options.fetchLimit = 1
+        
+        let result = PHAsset.fetchAssets(with: .video, options: options)
+        if let asset = result.firstObject {
+            PHImageManager.default().requestImage(for: asset,
+                                               targetSize: CGSize(width: 100, height: 100),
+                                               contentMode: .aspectFill,
+                                               options: nil) { [weak self] image, _ in
+                DispatchQueue.main.async {
+                    self?.galleryThumbnail.image = image
+                }
+            }
+        }
+    }
+    
     // MARK: - Actions
     @objc private func handleCapture() {
         guard let movieFileOutput = movieFileOutput else { return }
@@ -274,6 +329,30 @@ class CameraViewController: UIViewController {
         guard let videoURL = recordedVideoURL else { return }
         let postVideoVC = PostVideoViewController(videoURL: videoURL)
         navigationController?.pushViewController(postVideoVC, animated: true)
+    }
+    
+    @objc private func handleGalleryTap() {
+        let picker = UIImagePickerController()
+        picker.delegate = self
+        picker.mediaTypes = ["public.movie"]
+        picker.sourceType = .photoLibrary
+        picker.videoQuality = .typeHigh
+        present(picker, animated: true)
+    }
+    
+    // MARK: - UIImagePickerControllerDelegate
+    func imagePickerController(_ picker: UIImagePickerController, didFinishPickingMediaWithInfo info: [UIImagePickerController.InfoKey : Any]) {
+        dismiss(animated: true)
+        
+        guard let videoURL = info[.mediaURL] as? URL else { return }
+        
+        // Navigate directly to PostVideoViewController with selected video
+        let postVideoVC = PostVideoViewController(videoURL: videoURL)
+        navigationController?.pushViewController(postVideoVC, animated: true)
+    }
+    
+    func imagePickerControllerDidCancel(_ picker: UIImagePickerController) {
+        dismiss(animated: true)
     }
     
     // MARK: - Alerts
