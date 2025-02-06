@@ -385,11 +385,11 @@ class ProfileViewController: UIViewController {
     }
     
     private func fetchCounts() {
-        guard let userId = Auth.auth().currentUser?.uid else { return }
+        guard let userId = userId ?? Auth.auth().currentUser?.uid else { return }
         let db = Firestore.firestore()
         
-        // Get following count
-        db.collection("user_followers")
+        // Get following count (users that this user follows)
+        db.collection("follows")
             .whereField("follower_id", isEqualTo: userId)
             .getDocuments { [weak self] snapshot, error in
                 if let count = snapshot?.documents.count {
@@ -402,9 +402,9 @@ class ProfileViewController: UIViewController {
                 }
             }
         
-        // Get followers count
-        db.collection("user_followers")
-            .whereField("followed_id", isEqualTo: userId)
+        // Get followers count (users that follow this user)
+        db.collection("follows")
+            .whereField("following_id", isEqualTo: userId)
             .getDocuments { [weak self] snapshot, error in
                 if let count = snapshot?.documents.count {
                     DispatchQueue.main.async {
