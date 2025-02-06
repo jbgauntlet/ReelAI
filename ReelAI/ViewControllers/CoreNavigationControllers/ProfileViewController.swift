@@ -196,6 +196,7 @@ class ProfileViewController: UIViewController {
         setupConstraints()
         setupActions()
         fetchUserData()
+        fetchVideos()
     }
     
     // MARK: - Setup
