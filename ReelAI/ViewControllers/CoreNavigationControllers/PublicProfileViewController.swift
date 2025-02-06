@@ -179,21 +179,35 @@ class PublicProfileViewController: UIViewController {
             statsStackView.centerXAnchor.constraint(equalTo: headerView.centerXAnchor),
             statsStackView.leadingAnchor.constraint(greaterThanOrEqualTo: headerView.leadingAnchor, constant: 20),
             statsStackView.trailingAnchor.constraint(lessThanOrEqualTo: headerView.trailingAnchor, constant: -20),
-            
-            followButton.topAnchor.constraint(equalTo: statsStackView.bottomAnchor, constant: 16),
-            followButton.centerXAnchor.constraint(equalTo: headerView.centerXAnchor),
-            followButton.widthAnchor.constraint(equalToConstant: 200),
-            followButton.heightAnchor.constraint(equalToConstant: 40),
-            
-            bioLabel.topAnchor.constraint(equalTo: followButton.bottomAnchor, constant: 16),
-            bioLabel.leadingAnchor.constraint(equalTo: headerView.leadingAnchor, constant: 32),
-            bioLabel.trailingAnchor.constraint(equalTo: headerView.trailingAnchor, constant: -32),
-            bioLabel.bottomAnchor.constraint(equalTo: headerView.bottomAnchor, constant: -16),
-            
+        ])
+        
+        // Create different constraints based on whether it's own profile
+        if isOwnProfile {
+            NSLayoutConstraint.activate([
+                bioLabel.topAnchor.constraint(equalTo: statsStackView.bottomAnchor, constant: 16),
+                bioLabel.leadingAnchor.constraint(equalTo: headerView.leadingAnchor, constant: 32),
+                bioLabel.trailingAnchor.constraint(equalTo: headerView.trailingAnchor, constant: -32),
+                bioLabel.bottomAnchor.constraint(equalTo: headerView.bottomAnchor, constant: -16)
+            ])
+        } else {
+            NSLayoutConstraint.activate([
+                followButton.topAnchor.constraint(equalTo: statsStackView.bottomAnchor, constant: 16),
+                followButton.centerXAnchor.constraint(equalTo: headerView.centerXAnchor),
+                followButton.widthAnchor.constraint(equalToConstant: 200),
+                followButton.heightAnchor.constraint(equalToConstant: 40),
+                
+                bioLabel.topAnchor.constraint(equalTo: followButton.bottomAnchor, constant: 16),
+                bioLabel.leadingAnchor.constraint(equalTo: headerView.leadingAnchor, constant: 32),
+                bioLabel.trailingAnchor.constraint(equalTo: headerView.trailingAnchor, constant: -32),
+                bioLabel.bottomAnchor.constraint(equalTo: headerView.bottomAnchor, constant: -16)
+            ])
+        }
+        
+        NSLayoutConstraint.activate([
             collectionView.topAnchor.constraint(equalTo: headerView.bottomAnchor),
             collectionView.leadingAnchor.constraint(equalTo: view.leadingAnchor),
             collectionView.trailingAnchor.constraint(equalTo: view.trailingAnchor),
-            collectionView.bottomAnchor.constraint(equalTo: view.bottomAnchor, constant: 90),
+            collectionView.bottomAnchor.constraint(equalTo: view.bottomAnchor, constant: 90)
         ])
         
         followButton.addTarget(self, action: #selector(handleFollowTap), for: .touchUpInside)
