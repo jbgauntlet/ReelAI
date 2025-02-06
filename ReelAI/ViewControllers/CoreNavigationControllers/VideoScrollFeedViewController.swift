@@ -113,6 +113,47 @@ class VideoScrollFeedViewController: UIViewController {
         currentlyPlayingCell?.pause()
         cell.play()
         currentlyPlayingCell = cell
+        
+        // Track video view
+        if indexPath.item < videos.count {
+            trackVideoView(videos[indexPath.item])
+        }
+    }
+    
+    private func trackVideoView(_ video: Video) {
+        guard let currentUserId = Auth.auth().currentUser?.uid else { return }
+        
+        let db = Firestore.firestore()
+        let videoRef = db.collection("videos").document(video.id)
+        let viewedRef = db.collection("viewed_videos").document("\(video.id)_\(currentUserId)")
+        
+        // Increment view count using FieldValue.increment
+        videoRef.setData([
+            "views_count": FieldValue.increment(Int64(1))
+        ], merge: true)
+        
+        // Check if this is a first view for watch history
+        viewedRef.getDocument { snapshot, error in
+            if let error = error {
+                print("❌ Error checking view history: \(error.localizedDescription)")
+                return
+            }
+            
+            // If this is the first view, add to watch history
+            if snapshot?.exists != true {
+                viewedRef.setData([
+                    "video_id": video.id,
+                    "user_id": currentUserId,
+                    "first_viewed": FieldValue.serverTimestamp(),
+                    "last_viewed": FieldValue.serverTimestamp()
+                ])
+            } else {
+                // Update last_viewed timestamp for existing entry
+                viewedRef.updateData([
+                    "last_viewed": FieldValue.serverTimestamp()
+                ])
+            }
+        }
     }
     
     @objc private func handleClose() {

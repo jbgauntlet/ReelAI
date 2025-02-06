@@ -49,29 +49,29 @@ struct Video: Identifiable {
     
     // Initialize from Firestore document
     init?(from document: DocumentSnapshot) {
-        guard let data = document.data(),
-              let creatorId = data["creator_id"] as? String,
-              let storagePath = data["storage_path"] as? String else {
+        guard
+            let data = document.data(),
+            let creatorId = data["creator_id"] as? String,
+            let title = data["title"] as? String,
+            let caption = data["caption"] as? String,
+            let storagePath = data["storage_path"] as? String,
+            let createdAtTimestamp = data["created_at"] as? Timestamp
+        else {
             return nil
         }
         
         self.id = document.documentID
         self.creatorId = creatorId
         self.storagePath = storagePath
-        self.caption = data["caption"] as? String
-        self.title = data["title"] as? String
+        self.caption = caption
+        self.title = title
         self.tags = data["tags"] as? [String]
-        
+        self.createdAt = createdAtTimestamp.dateValue()
         self.viewsCount = (data["views_count"] as? Int) ?? 0
+        
         self.likesCount = (data["likes_count"] as? Int) ?? 0
         self.commentsCount = (data["comments_count"] as? Int) ?? 0
         self.bookmarksCount = (data["bookmarks_count"] as? Int) ?? 0
-        
-        if let timestamp = data["created_at"] as? Timestamp {
-            self.createdAt = timestamp.dateValue()
-        } else {
-            self.createdAt = Date()
-        }
         
         if let timestamp = data["updated_at"] as? Timestamp {
             self.updatedAt = timestamp.dateValue()

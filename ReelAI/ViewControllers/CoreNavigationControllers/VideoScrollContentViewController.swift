@@ -363,6 +363,35 @@ class FullScreenVideoCell: UICollectionViewCell {
         }
     }
     
+    private func formatCount(_ count: Int) -> String {
+        switch count {
+        case 0..<1000:
+            return "\(count)"
+        case 1000..<1_000_000:
+            let k = Double(count) / 1000.0
+            return String(format: "%.1fK", k)
+        default:
+            let m = Double(count) / 1_000_000.0
+            return String(format: "%.1fM", m)
+        }
+    }
+    
+    private func updateActionBar(with video: Video) {
+        // Update like button state and count
+        fetchLikeStatus(for: video)
+        fetchLikesCount(for: video)
+        
+        // Update comment count
+        fetchCommentsCount(for: video)
+        
+        // Update bookmark button state and count
+        fetchBookmarkStatus(for: video)
+        fetchBookmarksCount(for: video)
+        
+        // Update creator avatar
+        fetchCreatorAvatar(for: video)
+    }
+    
     private func configureVideo(with url: URL) {
         print("🎬 Configuring cell \(cellId) with video URL: \(url.lastPathComponent)")
         loadingIndicator.startAnimating()
@@ -486,71 +515,7 @@ class FullScreenVideoCell: UICollectionViewCell {
         print("🗑️ VideoCell \(cellId) being deallocated")
     }
     
-    private func updateActionBar(with video: Video) {
-        // Get creator's avatar
-        let db = Firestore.firestore()
-        
-        // Fetch like status and count
-        fetchLikeStatus(for: video)
-        fetchLikesCount(for: video)
-        fetchBookmarkStatus(for: video)
-        fetchBookmarksCount(for: video)
-        
-        commentCountLabel.text = "\(video.commentsCount)"
-        bookmarkCountLabel.text = "\(video.bookmarksCount)"
-        
-        db.collection("users").document(video.creatorId).getDocument { [weak self] snapshot, error in
-            guard let self = self,
-                  let data = snapshot?.data(),
-                  let username = data["username"] as? String else {
-                return
-            }
-            
-            if let avatarUrl = data["avatar"] as? String,
-               let url = URL(string: avatarUrl) {
-                // Create a URLSession data task to fetch the image
-                URLSession.shared.dataTask(with: url) { [weak self] data, response, error in
-                    if let error = error {
-                        print("Error loading avatar: \(error.localizedDescription)")
-                        // Fall back to default avatar on error
-                        DispatchQueue.main.async {
-                            self?.setupDefaultAvatar(with: username)
-                        }
-                        return
-                    }
-                    
-                    if let data = data,
-                       let image = UIImage(data: data) {
-                        DispatchQueue.main.async {
-                            // Clear any existing content
-                            self?.creatorAvatarButton.subviews.forEach { $0.removeFromSuperview() }
-                            self?.creatorAvatarButton.backgroundColor = .clear
-                            
-                            // Create a new UIImageView with the correct size and configuration
-                            let imageView = UIImageView(frame: self?.creatorAvatarButton.bounds ?? .zero)
-                            imageView.contentMode = .scaleAspectFill
-                            imageView.clipsToBounds = true
-                            imageView.image = image
-                            imageView.autoresizingMask = [.flexibleWidth, .flexibleHeight]
-                            
-                            // Add the image view to the button
-                            self?.creatorAvatarButton.addSubview(imageView)
-                        }
-                    } else {
-                        // Fall back to default avatar if image data is invalid
-                        DispatchQueue.main.async {
-                            self?.setupDefaultAvatar(with: username)
-                        }
-                    }
-                }.resume()
-            } else {
-                // No avatar URL, use default avatar
-                self.setupDefaultAvatar(with: username)
-            }
-        }
-    }
-    
-    func fetchLikeStatus(for video: Video) {
+    private func fetchLikeStatus(for video: Video) {
         guard let currentUserId = Auth.auth().currentUser?.uid else { return }
         
         let db = Firestore.firestore()
@@ -660,6 +625,60 @@ class FullScreenVideoCell: UICollectionViewCell {
             }
     }
     
+    private func fetchCreatorAvatar(for video: Video) {
+        let db = Firestore.firestore()
+        
+        db.collection("users").document(video.creatorId).getDocument { [weak self] snapshot, error in
+            guard let self = self,
+                  let data = snapshot?.data(),
+                  let username = data["username"] as? String else {
+                return
+            }
+            
+            if let avatarUrl = data["avatar"] as? String,
+               let url = URL(string: avatarUrl) {
+                // Create a URLSession data task to fetch the image
+                URLSession.shared.dataTask(with: url) { [weak self] data, response, error in
+                    if let error = error {
+                        print("Error loading avatar: \(error.localizedDescription)")
+                        // Fall back to default avatar on error
+                        DispatchQueue.main.async {
+                            self?.setupDefaultAvatar(with: username)
+                        }
+                        return
+                    }
+                    
+                    if let data = data,
+                       let image = UIImage(data: data) {
+                        DispatchQueue.main.async {
+                            // Clear any existing content
+                            self?.creatorAvatarButton.subviews.forEach { $0.removeFromSuperview() }
+                            self?.creatorAvatarButton.backgroundColor = .clear
+                            
+                            // Create a new UIImageView with the correct size and configuration
+                            let imageView = UIImageView(frame: self?.creatorAvatarButton.bounds ?? .zero)
+                            imageView.contentMode = .scaleAspectFill
+                            imageView.clipsToBounds = true
+                            imageView.image = image
+                            imageView.autoresizingMask = [.flexibleWidth, .flexibleHeight]
+                            
+                            // Add the image view to the button
+                            self?.creatorAvatarButton.addSubview(imageView)
+                        }
+                    } else {
+                        // Fall back to default avatar if image data is invalid
+                        DispatchQueue.main.async {
+                            self?.setupDefaultAvatar(with: username)
+                        }
+                    }
+                }.resume()
+            } else {
+                // No avatar URL, use default avatar
+                self.setupDefaultAvatar(with: username)
+            }
+        }
+    }
+    
     private func setupDefaultAvatar(with username: String) {
         // Clear any existing content
         creatorAvatarButton.setImage(nil, for: .normal)
@@ -711,6 +730,19 @@ class FullScreenVideoCell: UICollectionViewCell {
     @objc private func shareTapped() {
         guard let video = currentVideo else { return }
         delegate?.didTapShare(for: video)
+    }
+    
+    private func fetchCommentsCount(for video: Video) {
+        let db = Firestore.firestore()
+        db.collection("video_comments")
+            .whereField("video_id", isEqualTo: video.id)
+            .getDocuments { [weak self] snapshot, error in
+                guard let self = self else { return }
+                let count = snapshot?.documents.count ?? 0
+                DispatchQueue.main.async {
+                    self.commentCountLabel.text = "\(count)"
+                }
+            }
     }
 }
 
