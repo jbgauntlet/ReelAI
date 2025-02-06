@@ -536,10 +536,23 @@ class ProfileViewController: UIViewController {
                 }
             
         case .watchHistory:
-            // We'll implement this later
-            print("⏳ Watch history to be implemented")
-            self.videos = []
-            self.videoCollectionView.reloadData()
+            print("⏳ Fetching watch history")
+            // Get videos from viewed_videos collection
+            db.collection("viewed_videos")
+                .whereField("user_id", isEqualTo: userId)
+                .order(by: "last_viewed", descending: true) // Show most recently viewed first
+                .getDocuments { [weak self] snapshot, error in
+                    guard let documents = snapshot?.documents else {
+                        print("❌ No watch history found")
+                        self?.videos = []
+                        self?.videoCollectionView.reloadData()
+                        return
+                    }
+                    
+                    print("✅ Found \(documents.count) watched videos")
+                    let videoIds = documents.compactMap { $0.data()["video_id"] as? String }
+                    self?.fetchVideosByIds(videoIds)
+                }
         }
     }
     
