@@ -147,27 +147,85 @@ class InboxViewController: UIViewController {
                 return
             }
             
-            self.notifications = documents.compactMap { document in
+            // Process notifications and validate friend requests
+            let notificationsWithValidation = documents.compactMap { document -> (Notification, String)? in
                 let data = document.data()
                 guard let userId = data["user_id"] as? String,
                       let type = data["type"] as? String,
                       let content = data["content"] as? String,
-                      let createdAtTimestamp = data["created_at"] as? Timestamp else {
+                      let createdAtTimestamp = data["created_at"] as? Timestamp,
+                      let relatedId = data["related_id"] as? String else {
                     return nil
                 }
                 
-                return Notification(id: document.documentID,
-                                  userId: userId,
-                                  type: type,
-                                  content: content,
-                                  relatedId: data["related_id"] as? String,
-                                  createdAt: createdAtTimestamp.dateValue(),
-                                  read: data["read"] as? Bool ?? false)
+                let notification = Notification(id: document.documentID,
+                                             userId: userId,
+                                             type: type,
+                                             content: content,
+                                             relatedId: relatedId,
+                                             createdAt: createdAtTimestamp.dateValue(),
+                                             read: data["read"] as? Bool ?? false)
+                
+                return (notification, relatedId)
             }
             
-            self.emptyStateLabel.isHidden = !self.notifications.isEmpty
-            self.collectionView.reloadData()
+            // Validate friend request notifications by checking if the friend request still exists
+            let batch = db.batch()
+            let group = DispatchGroup()
+            var validNotifications: [Notification] = []
+            var hasGhostNotifications = false
+            
+            for (notification, relatedId) in notificationsWithValidation {
+                if notification.type == "friend_request" {
+                    group.enter()
+                    db.collection("friend_requests").document(relatedId).getDocument { snapshot, error in
+                        defer { group.leave() }
+                        
+                        if let exists = snapshot?.exists, exists {
+                            validNotifications.append(notification)
+                        } else {
+                            // Friend request doesn't exist, clean up the ghost notification
+                            batch.deleteDocument(db.collection("notifications").document(notification.id))
+                            hasGhostNotifications = true
+                        }
+                    }
+                } else {
+                    validNotifications.append(notification)
+                }
+            }
+            
+            group.notify(queue: .main) {
+                // Commit cleanup batch if needed
+                if hasGhostNotifications {
+                    batch.commit { error in
+                        if let error = error {
+                            print("Error cleaning up ghost notifications: \(error.localizedDescription)")
+                        }
+                        self.updateUI(with: validNotifications)
+                    }
+                } else {
+                    self.updateUI(with: validNotifications)
+                }
+            }
         }
+    }
+    
+    private func updateUI(with notifications: [Notification]) {
+        self.notifications = notifications
+        
+        // Update empty state based on current filter
+        if segmentedControl.selectedSegmentIndex == 1 {
+            // Friend Requests tab
+            let hasFriendRequests = notifications.contains { $0.type == "friend_request" }
+            emptyStateLabel.text = "No friend requests"
+            emptyStateLabel.isHidden = hasFriendRequests
+        } else {
+            // All notifications tab
+            emptyStateLabel.text = "No notifications yet"
+            emptyStateLabel.isHidden = !notifications.isEmpty
+        }
+        
+        collectionView.reloadData()
     }
     
     deinit {
@@ -223,39 +281,83 @@ extension InboxViewController: FriendRequestCellDelegate {
         let db = Firestore.firestore()
         let batch = db.batch()
         
-        // Get the friend request document
+        // First get the friend request to get sender info
         db.collection("friend_requests").document(requestId).getDocument { [weak self] snapshot, error in
-            guard let data = snapshot?.data(),
+            guard let self = self,
+                  let data = snapshot?.data(),
                   let senderId = data["sender_id"] as? String else { return }
             
             // Delete the friend request
             let requestRef = db.collection("friend_requests").document(requestId)
             batch.deleteDocument(requestRef)
             
-            if accept {
-                // Create friendship document
-                let friendshipId = "\(currentUserId)_\(senderId)"
-                let friendshipData: [String: Any] = [
-                    "user1_id": currentUserId,
-                    "user2_id": senderId,
-                    "created_at": FieldValue.serverTimestamp()
-                ]
-                batch.setData(friendshipData, forDocument: db.collection("friendships").document(friendshipId))
-                
-                // Create notification for sender
-                let notificationData: [String: Any] = [
-                    "user_id": senderId,
-                    "type": "friend_request_accepted",
-                    "content": "Your friend request was accepted",
-                    "related_id": friendshipId,
-                    "created_at": FieldValue.serverTimestamp(),
-                    "read": false
-                ]
-                batch.setData(notificationData, forDocument: db.collection("notifications").document())
-            }
-            
-            // Commit the batch
-            batch.commit()
+            // Find and delete ALL notifications related to this friend request
+            db.collection("notifications")
+                .whereField("related_id", isEqualTo: requestId)
+                .getDocuments { snapshot, error in
+                    guard let documents = snapshot?.documents else { return }
+                    
+                    // Remove all related notifications from UI
+                    let notificationIds = documents.map { $0.documentID }
+                    let indexesToDelete = self.notifications.enumerated()
+                        .filter { notificationIds.contains($0.element.id) }
+                        .map { $0.offset }
+                    
+                    // Delete notifications from Firestore
+                    documents.forEach { document in
+                        batch.deleteDocument(document.reference)
+                    }
+                    
+                    if accept {
+                        // Create friendship document
+                        let friendshipId = "\(currentUserId)_\(senderId)"
+                        let friendshipData: [String: Any] = [
+                            "user1_id": currentUserId,
+                            "user2_id": senderId,
+                            "created_at": FieldValue.serverTimestamp()
+                        ]
+                        batch.setData(friendshipData, forDocument: db.collection("friendships").document(friendshipId))
+                        
+                        // Create notification for sender
+                        let notificationData: [String: Any] = [
+                            "user_id": senderId,
+                            "type": "friend_request_accepted",
+                            "content": "Your friend request was accepted",
+                            "related_id": friendshipId,
+                            "created_at": FieldValue.serverTimestamp(),
+                            "read": false
+                        ]
+                        batch.setData(notificationData, forDocument: db.collection("notifications").document())
+                    }
+                    
+                    // Commit the batch
+                    batch.commit { error in
+                        if let error = error {
+                            print("Error handling friend request: \(error.localizedDescription)")
+                            // If there was an error, refresh the notifications to restore state
+                            DispatchQueue.main.async {
+                                self.fetchNotifications()
+                            }
+                        } else {
+                            // On success, update UI
+                            DispatchQueue.main.async {
+                                // Remove notifications from local array and update UI
+                                var indexPaths = [IndexPath]()
+                                for index in indexesToDelete.sorted(by: >) {
+                                    self.notifications.remove(at: index)
+                                    indexPaths.append(IndexPath(item: index, section: 0))
+                                }
+                                
+                                // Batch delete all cells
+                                if !indexPaths.isEmpty {
+                                    self.collectionView.deleteItems(at: indexPaths)
+                                }
+                                
+                                self.emptyStateLabel.isHidden = !self.notifications.isEmpty
+                            }
+                        }
+                    }
+                }
         }
     }
 }

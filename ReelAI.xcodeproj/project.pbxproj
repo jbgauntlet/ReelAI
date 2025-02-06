@@ -43,6 +43,9 @@
 		6F3544102D54FF6900B83129 /* PostVideoViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6F35440F2D54FF6900B83129 /* PostVideoViewController.swift */; };
 		6F3544122D5509C400B83129 /* LivestreamViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6F3544112D5509C400B83129 /* LivestreamViewController.swift */; };
 		6FB758CB2D5545FE00ECB2C6 /* InboxViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6FB758CA2D5545FE00ECB2C6 /* InboxViewController.swift */; };
+		6FB758CE2D55694100ECB2C6 /* NotificationCell.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6FB758CC2D55694100ECB2C6 /* NotificationCell.swift */; };
+		6FB758CF2D55694100ECB2C6 /* FriendRequestCell.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6FB758CD2D55694100ECB2C6 /* FriendRequestCell.swift */; };
+		6FB758D12D55696500ECB2C6 /* Notification.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6FB758D02D55696500ECB2C6 /* Notification.swift */; };
 		6FC41CA52D512CD7003849BC /* User.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6FC41CA42D512CD7003849BC /* User.swift */; };
 		6FC41CB42D5144DF003849BC /* GoogleService-Info.plist in Resources */ = {isa = PBXBuildFile; fileRef = 6FC41CB32D5144DF003849BC /* GoogleService-Info.plist */; };
 		6FC41CB72D5146DF003849BC /* FirebaseAnalytics in Frameworks */ = {isa = PBXBuildFile; productRef = 6FC41CB62D5146DF003849BC /* FirebaseAnalytics */; };
@@ -117,6 +120,9 @@
 		6F35440F2D54FF6900B83129 /* PostVideoViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PostVideoViewController.swift; sourceTree = "<group>"; };
 		6F3544112D5509C400B83129 /* LivestreamViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LivestreamViewController.swift; sourceTree = "<group>"; };
 		6FB758CA2D5545FE00ECB2C6 /* InboxViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InboxViewController.swift; sourceTree = "<group>"; };
+		6FB758CC2D55694100ECB2C6 /* NotificationCell.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = NotificationCell.swift; sourceTree = "<group>"; };
+		6FB758CD2D55694100ECB2C6 /* FriendRequestCell.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = FriendRequestCell.swift; sourceTree = "<group>"; };
+		6FB758D02D55696500ECB2C6 /* Notification.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = Notification.swift; sourceTree = "<group>"; };
 		6FC41CA42D512CD7003849BC /* User.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = User.swift; sourceTree = "<group>"; };
 		6FC41CB32D5144DF003849BC /* GoogleService-Info.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; path = "GoogleService-Info.plist"; sourceTree = "<group>"; };
 		6FC69C7A2D5205830020CF09 /* Video.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; name = Video.swift; path = ReelAI/Models/Video.swift; sourceTree = SOURCE_ROOT; };
@@ -211,6 +217,7 @@
 		042273702C5D9C9F00A92F9A /* Models */ = {
 			isa = PBXGroup;
 			children = (
+				6FB758D02D55696500ECB2C6 /* Notification.swift */,
 				6F216C342D53D906000ED151 /* FieldType.swift */,
 				6FC69C7A2D5205830020CF09 /* Video.swift */,
 				6FC41CA42D512CD7003849BC /* User.swift */,
@@ -316,6 +323,8 @@
 		6FC69C862D52A3360020CF09 /* Views */ = {
 			isa = PBXGroup;
 			children = (
+				6FB758CD2D55694100ECB2C6 /* FriendRequestCell.swift */,
+				6FB758CC2D55694100ECB2C6 /* NotificationCell.swift */,
 				6FC69C8D2D52C84E0020CF09 /* ProfileVideoThumbnailCell.swift */,
 			);
 			path = Views;
@@ -425,6 +434,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				6FC69C812D526DFE0020CF09 /* EditProfileViewController.swift in Sources */,
+				6FB758CF2D55694100ECB2C6 /* FriendRequestCell.swift in Sources */,
 				04D47C9E2CA53BC500D5DB43 /* AuthenticationModalViewController.swift in Sources */,
 				04FB12132C70BA4B00A1C209 /* VerifyAccountViewController.swift in Sources */,
 				04BA85662C7D122300992B36 /* CommonUtils.swift in Sources */,
@@ -440,6 +450,7 @@
 				6FC69C902D52CE8A0020CF09 /* VideoScrollFeedViewController.swift in Sources */,
 				0422737F2C5DA7DA00A92F9A /* PaddedTextField.swift in Sources */,
 				0422732F2C58590100A92F9A /* VideoScrollContentViewController.swift in Sources */,
+				6FB758CE2D55694100ECB2C6 /* NotificationCell.swift in Sources */,
 				6FC69C7B2D5205830020CF09 /* Video.swift in Sources */,
 				042273672C5D68F100A92F9A /* GlobalDataManager.swift in Sources */,
 				04FB120B2C7081DC00A1C209 /* FriendsViewController.swift in Sources */,
@@ -461,6 +472,7 @@
 				04A12AE02C7993420056120C /* DimmingPresentationController.swift in Sources */,
 				6FB758CB2D5545FE00ECB2C6 /* InboxViewController.swift in Sources */,
 				6FC69C8C2D52C1170020CF09 /* PublicProfileViewController.swift in Sources */,
+				6FB758D12D55696500ECB2C6 /* Notification.swift in Sources */,
 				042272F82C58573C00A92F9A /* SceneDelegate.swift in Sources */,
 				0422732D2C58590100A92F9A /* CameraViewController.swift in Sources */,
 				04D47C8C2C90758A00D5DB43 /* LeftAlignedFlowLayout.swift in Sources */,
