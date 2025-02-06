@@ -60,7 +60,9 @@ class CameraViewController: UIViewController {
         let button = UIButton(type: .system)
         button.setTitle("Next", for: .normal)
         button.titleLabel?.font = .systemFont(ofSize: 17, weight: .semibold)
+        button.backgroundColor = UIColor(red: 1.0, green: 0.4, blue: 0.4, alpha: 1.0) // Rose color
         button.tintColor = .white
+        button.layer.cornerRadius = 22 // Rounded corners
         button.isHidden = true
         button.translatesAutoresizingMaskIntoConstraints = false
         return button
@@ -316,9 +318,10 @@ extension CameraViewController: AVCaptureFileOutputRecordingDelegate {
         // Store the recorded video URL
         recordedVideoURL = outputFileURL
         
-        // Show the next button
+        // Show the next button and hide flip camera button
         DispatchQueue.main.async {
             self.nextButton.isHidden = false
+            self.flipCameraButton.isHidden = true
         }
         
         print("Video recorded successfully at: \(outputFileURL)")

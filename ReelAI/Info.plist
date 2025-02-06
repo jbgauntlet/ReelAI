@@ -2,6 +2,8 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>RealAI needs microphone access to let you record video</string>
 	<key>NSCameraUsageDescription</key>
 	<string>ReelAI needs camera access to let you take profile pictures</string>
 	<key>NSPhotoLibraryUsageDescription</key>
