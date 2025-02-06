@@ -83,6 +83,13 @@ class CommentsViewController: UIViewController {
         return button
     }()
     
+    private var collectionViewHeightConstraint: NSLayoutConstraint?
+    private var originalCollectionViewHeight: CGFloat = 0
+    
+    private var containerTopConstraint: NSLayoutConstraint?
+    private var containerBottomConstraint: NSLayoutConstraint?
+    private var commentInputBottomConstraint: NSLayoutConstraint?
+    
     // MARK: - Lifecycle
     override func viewDidLoad() {
         super.viewDidLoad()
@@ -96,6 +103,13 @@ class CommentsViewController: UIViewController {
     override func viewDidAppear(_ animated: Bool) {
         super.viewDidAppear(animated)
         animateIn()
+    }
+    
+    override func viewDidLayoutSubviews() {
+        super.viewDidLayoutSubviews()
+        if originalCollectionViewHeight == 0 {
+            originalCollectionViewHeight = commentsCollectionView.bounds.height
+        }
     }
     
     // MARK: - Setup
@@ -112,11 +126,16 @@ class CommentsViewController: UIViewController {
         commentInputContainer.addSubview(commentTextField)
         commentInputContainer.addSubview(postButton)
         
+        // Store constraints for dynamic updates
+        containerTopConstraint = containerView.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor, constant: view.bounds.height * 0.4)
+        containerBottomConstraint = containerView.bottomAnchor.constraint(equalTo: view.bottomAnchor)
+        commentInputBottomConstraint = commentInputContainer.bottomAnchor.constraint(equalTo: containerView.bottomAnchor, constant: -20)
+        
         NSLayoutConstraint.activate([
             containerView.leadingAnchor.constraint(equalTo: view.leadingAnchor),
             containerView.trailingAnchor.constraint(equalTo: view.trailingAnchor),
-            containerView.bottomAnchor.constraint(equalTo: view.bottomAnchor),
-            containerView.heightAnchor.constraint(equalTo: view.heightAnchor, multiplier: 0.7),
+            containerTopConstraint!,
+            containerBottomConstraint!,
             
             headerLabel.topAnchor.constraint(equalTo: containerView.topAnchor, constant: 20),
             headerLabel.leadingAnchor.constraint(equalTo: containerView.leadingAnchor, constant: 16),
@@ -124,7 +143,7 @@ class CommentsViewController: UIViewController {
             
             commentInputContainer.leadingAnchor.constraint(equalTo: containerView.leadingAnchor),
             commentInputContainer.trailingAnchor.constraint(equalTo: containerView.trailingAnchor),
-            commentInputContainer.bottomAnchor.constraint(equalTo: containerView.bottomAnchor, constant: -20),
+            commentInputBottomConstraint!,
             commentInputContainer.heightAnchor.constraint(equalToConstant: 80),
             
             commentTextField.leadingAnchor.constraint(equalTo: commentInputContainer.leadingAnchor, constant: 16),
@@ -146,9 +165,6 @@ class CommentsViewController: UIViewController {
         let tapGesture = UITapGestureRecognizer(target: self, action: #selector(handleBackgroundTap))
         tapGesture.delegate = self
         view.addGestureRecognizer(tapGesture)
-        
-        // Initially position container off screen
-        containerView.transform = CGAffineTransform(translationX: 0, y: view.bounds.height)
         
         // Add delegate for text field
         commentTextField.delegate = self
@@ -173,10 +189,6 @@ class CommentsViewController: UIViewController {
         UIView.animate(withDuration: 0.3) {
             self.view.backgroundColor = .black.withAlphaComponent(0.5)
         }
-        
-        UIView.animate(withDuration: 0.3, delay: 0, usingSpringWithDamping: 0.8, initialSpringVelocity: 0.5) {
-            self.containerView.transform = .identity
-        }
     }
     
     private func animateOut(completion: @escaping () -> Void) {
@@ -190,17 +202,31 @@ class CommentsViewController: UIViewController {
     
     // MARK: - Keyboard Handling
     @objc private func keyboardWillShow(notification: NSNotification) {
-        guard let keyboardFrame = notification.userInfo?[UIResponder.keyboardFrameEndUserInfoKey] as? CGRect else { return }
+        guard let keyboardFrame = notification.userInfo?[UIResponder.keyboardFrameEndUserInfoKey] as? CGRect,
+              let duration = notification.userInfo?[UIResponder.keyboardAnimationDurationUserInfoKey] as? Double else { return }
         
         let keyboardHeight = keyboardFrame.height
-        UIView.animate(withDuration: 0.3) {
-            self.containerView.transform = CGAffineTransform(translationX: 0, y: -keyboardHeight)
+        
+        UIView.animate(withDuration: duration) {
+            // Move container to safe area top
+            self.containerTopConstraint?.constant = 0
+            
+            // Update bottom constraints to account for keyboard
+            self.commentInputBottomConstraint?.constant = -keyboardHeight - 20 // Keep 20pt padding
+            self.view.layoutIfNeeded()
         }
     }
     
     @objc private func keyboardWillHide(notification: NSNotification) {
-        UIView.animate(withDuration: 0.3) {
-            self.containerView.transform = .identity
+        guard let duration = notification.userInfo?[UIResponder.keyboardAnimationDurationUserInfoKey] as? Double else { return }
+        
+        UIView.animate(withDuration: duration) {
+            // Move container back to 40% from safe area top
+            self.containerTopConstraint?.constant = self.view.bounds.height * 0.4
+            
+            // Reset bottom constraint to original value
+            self.commentInputBottomConstraint?.constant = -20
+            self.view.layoutIfNeeded()
         }
     }
     
