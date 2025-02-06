@@ -101,22 +101,26 @@ class ProfileViewController: UIViewController {
     private let editProfileButton: UIButton = {
         let button = UIButton(type: .system)
         button.setTitle("Edit Profile", for: .normal)
-        button.backgroundColor = .systemBackground
+        button.setBackgroundImage(UIImage.from(color: UIColor(hex: "EEEEEF")), for: .normal)
+        button.setBackgroundImage(UIImage.from(color: .darkGray), for: .highlighted)
         button.setTitleColor(.black, for: .normal)
         button.layer.cornerRadius = 15
-        button.layer.borderWidth = 1
-        button.layer.borderColor = UIColor.systemGray4.cgColor
+        button.clipsToBounds = true
+        button.layer.borderWidth = 0
+        button.setTitleColor(.black, for: .highlighted)
         return button
     }()
     
     private let shareProfileButton: UIButton = {
         let button = UIButton(type: .system)
         button.setTitle("Share Profile", for: .normal)
-        button.backgroundColor = .systemBackground
+        button.setBackgroundImage(UIImage.from(color: UIColor(hex: "EEEEEF")), for: .normal)
+        button.setBackgroundImage(UIImage.from(color: .darkGray), for: .highlighted)
         button.setTitleColor(.black, for: .normal)
         button.layer.cornerRadius = 15
-        button.layer.borderWidth = 1
-        button.layer.borderColor = UIColor.systemGray4.cgColor
+        button.clipsToBounds = true
+        button.layer.borderWidth = 0
+        button.setTitleColor(.black, for: .highlighted)
         return button
     }()
     
@@ -124,11 +128,13 @@ class ProfileViewController: UIViewController {
         let button = UIButton(type: .system)
         let config = UIImage.SymbolConfiguration(pointSize: 20, weight: .medium)
         button.setImage(UIImage(systemName: "person.badge.plus", withConfiguration: config), for: .normal)
-        button.backgroundColor = .systemBackground
+        button.setBackgroundImage(UIImage.from(color: UIColor(hex: "EEEEEF")), for: .normal)
+        button.setBackgroundImage(UIImage.from(color: .darkGray), for: .highlighted)
         button.tintColor = .black
         button.layer.cornerRadius = 15
-        button.layer.borderWidth = 1
-        button.layer.borderColor = UIColor.systemGray4.cgColor
+        button.clipsToBounds = true
+        button.layer.borderWidth = 0
+        button.setTitleColor(.black, for: .highlighted)
         return button
     }()
     
@@ -574,5 +580,21 @@ extension ProfileViewController: UICollectionViewDelegate, UICollectionViewDataS
         let videoScrollFeedVC = VideoScrollFeedViewController(videos: videos, startingIndex: indexPath.item)
         videoScrollFeedVC.modalPresentationStyle = .fullScreen
         present(videoScrollFeedVC, animated: true)
+    }
+}
+
+extension UIImage {
+    static func from(color: UIColor) -> UIImage? {
+        let rect = CGRect(x: 0, y: 0, width: 1, height: 1)
+        UIGraphicsBeginImageContext(rect.size)
+        guard let context = UIGraphicsGetCurrentContext() else { return nil }
+        
+        context.setFillColor(color.cgColor)
+        context.fill(rect)
+        
+        let image = UIGraphicsGetImageFromCurrentImageContext()
+        UIGraphicsEndImageContext()
+        
+        return image
     }
 }
