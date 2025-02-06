@@ -496,31 +496,20 @@ class ProfileViewController: UIViewController {
                     self?.handleVideoSnapshot(snapshot, error)
                 }
             
-        case .watchHistory:
-            print("📺 Fetching watch history")
-            db.collection("video_views")
-                .whereField("user_id", isEqualTo: userId)
-                .order(by: "last_viewed", descending: true)
-                .getDocuments { [weak self] snapshot, error in
-                    guard let documents = snapshot?.documents else {
-                        print("❌ No watch history documents found")
-                        return
-                    }
-                    print("✅ Found \(documents.count) watched videos")
-                    let videoIds = documents.compactMap { $0.data()["video_id"] as? String }
-                    self?.fetchVideosByIds(videoIds)
-                }
-            
         case .bookmarked:
             print("🔖 Fetching bookmarked videos")
+            // First get the bookmarked video IDs
             db.collection("video_bookmarks")
                 .whereField("user_id", isEqualTo: userId)
                 .order(by: "created_at", descending: true)
                 .getDocuments { [weak self] snapshot, error in
                     guard let documents = snapshot?.documents else {
                         print("❌ No bookmarked videos found")
+                        self?.videos = []
+                        self?.videoCollectionView.reloadData()
                         return
                     }
+                    
                     print("✅ Found \(documents.count) bookmarked videos")
                     let videoIds = documents.compactMap { $0.data()["video_id"] as? String }
                     self?.fetchVideosByIds(videoIds)
@@ -528,18 +517,28 @@ class ProfileViewController: UIViewController {
             
         case .liked:
             print("❤️ Fetching liked videos")
+            // First get the liked video IDs
             db.collection("video_likes")
                 .whereField("user_id", isEqualTo: userId)
                 .order(by: "created_at", descending: true)
                 .getDocuments { [weak self] snapshot, error in
                     guard let documents = snapshot?.documents else {
                         print("❌ No liked videos found")
+                        self?.videos = []
+                        self?.videoCollectionView.reloadData()
                         return
                     }
+                    
                     print("✅ Found \(documents.count) liked videos")
                     let videoIds = documents.compactMap { $0.data()["video_id"] as? String }
                     self?.fetchVideosByIds(videoIds)
                 }
+            
+        case .watchHistory:
+            // We'll implement this later
+            print("⏳ Watch history to be implemented")
+            self.videos = []
+            self.videoCollectionView.reloadData()
         }
     }
     
@@ -566,6 +565,7 @@ class ProfileViewController: UIViewController {
             return
         }
         
+        print("🎯 Fetching details for \(ids.count) videos")
         let db = Firestore.firestore()
         let group = DispatchGroup()
         var fetchedVideos: [Video] = []
@@ -575,14 +575,21 @@ class ProfileViewController: UIViewController {
             db.collection("videos").document(id).getDocument { snapshot, error in
                 defer { group.leave() }
                 
+                if let error = error {
+                    print("❌ Error fetching video \(id): \(error.localizedDescription)")
+                    return
+                }
+                
                 if let document = snapshot,
                    let video = Video(from: document) {
                     fetchedVideos.append(video)
+                    print("✅ Successfully fetched video: \(id)")
                 }
             }
         }
         
         group.notify(queue: .main) { [weak self] in
+            print("🎬 Finished fetching all videos. Found \(fetchedVideos.count) videos")
             self?.videos = fetchedVideos
             self?.videoCollectionView.reloadData()
         }
