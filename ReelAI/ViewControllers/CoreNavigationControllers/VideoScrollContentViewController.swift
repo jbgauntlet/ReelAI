@@ -375,7 +375,7 @@ class FullScreenVideoCell: UICollectionViewCell {
         player.automaticallyWaitsToMinimizeStalling = false
         self.player = player
         
-        // Create player layer
+        // Create player layer and set frame immediately
         let playerLayer = AVPlayerLayer(player: player)
         playerLayer.videoGravity = .resizeAspectFill
         playerLayer.frame = playerView.bounds
@@ -384,6 +384,9 @@ class FullScreenVideoCell: UICollectionViewCell {
         // Remove any existing player layers
         playerView.layer.sublayers?.forEach { $0.removeFromSuperlayer() }
         playerView.layer.addSublayer(playerLayer)
+        
+        // Ensure frame is set correctly before proceeding
+        layoutIfNeeded()
         
         // Add observers
         NotificationCenter.default.addObserver(self,
