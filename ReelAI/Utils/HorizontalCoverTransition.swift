@@ -19,35 +19,41 @@ class HorizontalCoverTransition: NSObject, UIViewControllerAnimatedTransitioning
         let containerView = transitionContext.containerView
         let screenWidth = containerView.bounds.width
         
-        let toView = toViewController.view!
-        
         if isPresenting {
-            print("toView: " + toView.description)
-            print("toViewController: " + toViewController.description)
-            print("fromViewController: " + fromViewController.description)
-            
-            // Presenting (forward transition)
+            let toView = toViewController.view!
             toView.frame = CGRect(x: screenWidth, y: 0, width: screenWidth, height: containerView.bounds.height)
             containerView.addSubview(toView)
             
-            UIView.animate(withDuration: transitionDuration(using: transitionContext), animations: {
-                fromViewController.view.alpha = 0.5 // Optional: Dim the underlying view
-                toView.frame = containerView.bounds // Slide in toView from the right
+            UIView.animate(withDuration: transitionDuration(using: transitionContext),
+                         delay: 0,
+                         options: .curveEaseInOut,
+                         animations: {
+                fromViewController.view.alpha = 0.5
+                toView.frame = containerView.bounds
             }, completion: { finished in
                 transitionContext.completeTransition(finished)
             })
         } else {
-            print("toView: " + toView.description)
-            print("toViewController: " + toViewController.description)
-            print("fromViewController: " + fromViewController.description)
+            let toView = toViewController.view!
+            let fromView = fromViewController.view!
             
-            // Dismissing (backward transition)
+            // Ensure the destination view is in the container and behind the current view
+            if toView.superview == nil {
+                containerView.insertSubview(toView, belowSubview: fromView)
+                toView.frame = containerView.bounds
+            }
             
-            UIView.animate(withDuration: transitionDuration(using: transitionContext), animations: {
-                fromViewController.view.frame = CGRect(x: screenWidth, y: 0, width: screenWidth, height: containerView.bounds.height) // Slide out to the right
-                toView.alpha = 1.0 // Restore the alpha of the toView
+            // Reset the alpha of the destination view
+            toView.alpha = 0.5
+            
+            UIView.animate(withDuration: transitionDuration(using: transitionContext),
+                         delay: 0,
+                         options: .curveEaseInOut,
+                         animations: {
+                fromView.frame = CGRect(x: screenWidth, y: 0, width: screenWidth, height: containerView.bounds.height)
+                toView.alpha = 1.0
             }, completion: { finished in
-                fromViewController.view.removeFromSuperview() // Remove the fromView from the hierarchy
+                fromView.removeFromSuperview()
                 transitionContext.completeTransition(finished)
             })
         }
