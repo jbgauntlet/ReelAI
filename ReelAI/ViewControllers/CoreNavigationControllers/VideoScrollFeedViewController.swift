@@ -199,36 +199,39 @@ extension VideoScrollFeedViewController: FullScreenVideoCellDelegate {
     func didTapLike(for video: Video) {
         guard let currentUserId = Auth.auth().currentUser?.uid else { return }
         
-        let db = Firestore.firestore()
-        let likeRef = db.collection("video_likes").document("\(video.id)_\(currentUserId)")
-        
+        // Find the cell and update UI optimistically
         if let visibleCell = findVisibleCell(for: video) {
-            likeRef.getDocument { [weak self] snapshot, error in
-                guard let exists = snapshot?.exists else { return }
-                
-                if exists {
-                    // Unlike
-                    visibleCell.animateLikeButton(isLiked: false)
-                    likeRef.delete { error in
-                        if error == nil {
-                            visibleCell.fetchLikesCount(for: video)
-                        } else {
-                            visibleCell.animateLikeButton(isLiked: true)
-                        }
+            let isCurrentlyLiked = video.isLikedByCurrentUser
+            let newLikeState = !isCurrentlyLiked
+            
+            // Update UI optimistically
+            video.updateLikeStatus(isLiked: newLikeState)
+            visibleCell.updateUI(with: video)
+            
+            // Update Firebase in background
+            let db = Firestore.firestore()
+            let likeRef = db.collection("video_likes").document("\(video.id)_\(currentUserId)")
+            
+            if newLikeState {
+                likeRef.setData([
+                    "video_id": video.id,
+                    "user_id": currentUserId,
+                    "created_at": FieldValue.serverTimestamp()
+                ]) { [weak self] error in
+                    if let error = error {
+                        // Revert on error
+                        print("❌ Error liking video: \(error.localizedDescription)")
+                        video.updateLikeStatus(isLiked: isCurrentlyLiked)
+                        visibleCell.updateUI(with: video)
                     }
-                } else {
-                    // Like
-                    visibleCell.animateLikeButton(isLiked: true)
-                    likeRef.setData([
-                        "video_id": video.id,
-                        "user_id": currentUserId,
-                        "created_at": FieldValue.serverTimestamp()
-                    ]) { error in
-                        if error == nil {
-                            visibleCell.fetchLikesCount(for: video)
-                        } else {
-                            visibleCell.animateLikeButton(isLiked: false)
-                        }
+                }
+            } else {
+                likeRef.delete { [weak self] error in
+                    if let error = error {
+                        // Revert on error
+                        print("❌ Error unliking video: \(error.localizedDescription)")
+                        video.updateLikeStatus(isLiked: isCurrentlyLiked)
+                        visibleCell.updateUI(with: video)
                     }
                 }
             }
@@ -250,18 +253,18 @@ extension VideoScrollFeedViewController: FullScreenVideoCellDelegate {
         commentsVC.videoId = video.id
         commentsVC.modalPresentationStyle = .overFullScreen
         
-        // Set up comment count update handlers
+        // Handle comment count updates optimistically
         commentsVC.onCommentAdded = { [weak self] in
+            video.updateCommentCount(delta: 1)
             if let cell = self?.findVisibleCell(for: video) {
-                let currentCount = Int(cell.commentCountLabel.text ?? "0") ?? 0
-                cell.commentCountLabel.text = "\(currentCount + 1)"
+                cell.updateUI(with: video)
             }
         }
         
         commentsVC.onCommentDeleted = { [weak self] in
+            video.updateCommentCount(delta: -1)
             if let cell = self?.findVisibleCell(for: video) {
-                let currentCount = Int(cell.commentCountLabel.text ?? "0") ?? 0
-                cell.commentCountLabel.text = "\(max(0, currentCount - 1))"
+                cell.updateUI(with: video)
             }
         }
         
@@ -271,20 +274,41 @@ extension VideoScrollFeedViewController: FullScreenVideoCellDelegate {
     func didTapBookmark(for video: Video) {
         guard let currentUserId = Auth.auth().currentUser?.uid else { return }
         
-        let db = Firestore.firestore()
-        let bookmarkRef = db.collection("video_bookmarks").document("\(video.id)_\(currentUserId)")
-        
-        bookmarkRef.getDocument { [weak self] snapshot, error in
-            guard let exists = snapshot?.exists else { return }
+        // Find the cell and update UI optimistically
+        if let visibleCell = findVisibleCell(for: video) {
+            let isCurrentlyBookmarked = video.isBookmarkedByCurrentUser
+            let newBookmarkState = !isCurrentlyBookmarked
             
-            if exists {
-                bookmarkRef.delete()
-            } else {
+            // Update UI optimistically
+            video.updateBookmarkStatus(isBookmarked: newBookmarkState)
+            visibleCell.updateUI(with: video)
+            
+            // Update Firebase in background
+            let db = Firestore.firestore()
+            let bookmarkRef = db.collection("video_bookmarks").document("\(video.id)_\(currentUserId)")
+            
+            if newBookmarkState {
                 bookmarkRef.setData([
                     "video_id": video.id,
                     "user_id": currentUserId,
                     "created_at": FieldValue.serverTimestamp()
-                ])
+                ]) { [weak self] error in
+                    if let error = error {
+                        // Revert on error
+                        print("❌ Error bookmarking video: \(error.localizedDescription)")
+                        video.updateBookmarkStatus(isBookmarked: isCurrentlyBookmarked)
+                        visibleCell.updateUI(with: video)
+                    }
+                }
+            } else {
+                bookmarkRef.delete { [weak self] error in
+                    if let error = error {
+                        // Revert on error
+                        print("❌ Error unbookmarking video: \(error.localizedDescription)")
+                        video.updateBookmarkStatus(isBookmarked: isCurrentlyBookmarked)
+                        visibleCell.updateUI(with: video)
+                    }
+                }
             }
         }
     }

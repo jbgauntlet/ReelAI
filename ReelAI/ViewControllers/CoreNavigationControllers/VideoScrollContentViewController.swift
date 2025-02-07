@@ -422,8 +422,6 @@ class FullScreenVideoCell: UICollectionViewCell {
         }
     }
     
-    // MARK: - Video Configuration Methods
-    
     /// Configures the cell with a video model
     /// - Parameter video: The video model to display
     func configure(with video: Video) {
@@ -433,13 +431,44 @@ class FullScreenVideoCell: UICollectionViewCell {
         guard let videoURL = URL(string: video.storagePath) else { return }
         configureVideo(with: videoURL)
         
-        // Update UI components
-        updateActionBar(with: video)
+        // Update UI with cached data
+        updateUI(with: video)
+    }
+    
+    /// Updates the UI with video data
+    func updateUI(with video: Video) {
+        // Update counts
+        likeCountLabel.text = formatCount(video.likesCount)
+        commentCountLabel.text = formatCount(video.commentsCount)
+        bookmarkCountLabel.text = formatCount(video.bookmarksCount)
         
-        // Update info panel content
+        // Update interaction states
+        animateLikeButton(isLiked: video.isLikedByCurrentUser)
+        animateBookmarkButton(isBookmarked: video.isBookmarkedByCurrentUser)
+        
+        // Update creator info
+        if let avatarURL = video.creatorAvatarURL,
+           let url = URL(string: avatarURL) {
+            // Load avatar image from URL
+            URLSession.shared.dataTask(with: url) { [weak self] data, response, error in
+                if let data = data,
+                   let image = UIImage(data: data) {
+                    DispatchQueue.main.async {
+                        self?.updateAvatarWithImage(image)
+                    }
+                } else {
+                    DispatchQueue.main.async {
+                        self?.setupDefaultAvatar(with: video.creatorUsername)
+                    }
+                }
+            }.resume()
+        } else {
+            setupDefaultAvatar(with: video.creatorUsername)
+        }
+        
+        // Update info panel
         titleLabel.text = video.title
         captionLabel.text = video.caption
-        // Format and display tags if available
         if let tags = video.tags {
             tagsLabel.text = tags.map { "#\($0)" }.joined(separator: " ")
         } else {
@@ -461,18 +490,6 @@ class FullScreenVideoCell: UICollectionViewCell {
             let m = Double(count) / 1_000_000.0
             return String(format: "%.1fM", m)
         }
-    }
-    
-    /// Updates the action bar UI components with video data
-    /// - Parameter video: The video model containing the data
-    private func updateActionBar(with video: Video) {
-        // Fetch and update interaction states and counts
-        fetchLikeStatus(for: video)
-        fetchLikesCount(for: video)
-        fetchCommentsCount(for: video)
-        fetchBookmarkStatus(for: video)
-        fetchBookmarksCount(for: video)
-        fetchCreatorAvatar(for: video)
     }
     
     /// Configures the video player with the provided URL
@@ -631,225 +648,6 @@ class FullScreenVideoCell: UICollectionViewCell {
         print("🗑️ VideoCell \(cellId) being deallocated")
     }
     
-    // MARK: - Firebase Interaction Methods
-    
-    /// Fetches and updates the like status for a video
-    /// - Parameter video: The video to check like status for
-    private func fetchLikeStatus(for video: Video) {
-        guard let currentUserId = Auth.auth().currentUser?.uid else { return }
-        
-        let db = Firestore.firestore()
-        let likeRef = db.collection("video_likes").document("\(video.id)_\(currentUserId)")
-        
-        likeRef.getDocument { [weak self] snapshot, error in
-            guard let self = self else { return }
-            
-            // Update like button appearance based on like status
-            if snapshot?.exists == true {
-                self.animateLikeButton(isLiked: true)
-            } else {
-                self.animateLikeButton(isLiked: false)
-            }
-        }
-    }
-    
-    /// Animates the like button state change
-    /// - Parameter isLiked: Whether the video is liked
-    func animateLikeButton(isLiked: Bool) {
-        // Scale down animation
-        UIView.animate(withDuration: 0.15, animations: {
-            self.likeButton.transform = CGAffineTransform(scaleX: 0.8, y: 0.8)
-        }) { _ in
-            // Scale up and color change animation
-            UIView.animate(withDuration: 0.25, delay: 0, usingSpringWithDamping: 0.5, initialSpringVelocity: 0.5, options: .curveEaseInOut) {
-                self.likeButton.transform = CGAffineTransform.identity
-                self.likeButton.tintColor = isLiked ? .systemRed : .white
-            }
-        }
-    }
-    
-    /// Fetches and updates the likes count for a video
-    /// - Parameter video: The video to fetch likes count for
-    func fetchLikesCount(for video: Video) {
-        let db = Firestore.firestore()
-        db.collection("video_likes")
-            .whereField("video_id", isEqualTo: video.id)
-            .getDocuments { [weak self] snapshot, error in
-                guard let self = self else { return }
-                
-                if let error = error {
-                    print("Error fetching likes: \(error)")
-                    return
-                }
-                
-                // Update UI with likes count
-                let likesCount = snapshot?.documents.count ?? 0
-                self.likeCountLabel.text = "\(likesCount)"
-                
-                // Update video document if count has changed
-                if likesCount != video.likesCount {
-                    db.collection("videos").document(video.id).updateData([
-                        "likes_count": likesCount
-                    ])
-                }
-            }
-    }
-    
-    /// Fetches and updates the bookmark status for a video
-    /// - Parameter video: The video to check bookmark status for
-    func fetchBookmarkStatus(for video: Video) {
-        guard let currentUserId = Auth.auth().currentUser?.uid else { return }
-        
-        let db = Firestore.firestore()
-        let bookmarkRef = db.collection("video_bookmarks").document("\(video.id)_\(currentUserId)")
-        
-        bookmarkRef.getDocument { [weak self] snapshot, error in
-            guard let self = self else { return }
-            
-            // Update bookmark button appearance based on bookmark status
-            if snapshot?.exists == true {
-                self.animateBookmarkButton(isBookmarked: true)
-            } else {
-                self.animateBookmarkButton(isBookmarked: false)
-            }
-        }
-    }
-    
-    /// Animates the bookmark button state change
-    /// - Parameter isBookmarked: Whether the video is bookmarked
-    func animateBookmarkButton(isBookmarked: Bool) {
-        // Scale down animation
-        UIView.animate(withDuration: 0.15, animations: {
-            self.bookmarkButton.transform = CGAffineTransform(scaleX: 0.8, y: 0.8)
-        }) { _ in
-            // Scale up and color change animation
-            UIView.animate(withDuration: 0.25, delay: 0, usingSpringWithDamping: 0.5, initialSpringVelocity: 0.5, options: .curveEaseInOut) {
-                self.bookmarkButton.transform = CGAffineTransform.identity
-                self.bookmarkButton.tintColor = isBookmarked ? .systemYellow : .white
-            }
-        }
-    }
-    
-    /// Fetches and updates the bookmarks count for a video
-    /// - Parameter video: The video to fetch bookmarks count for
-    func fetchBookmarksCount(for video: Video) {
-        let db = Firestore.firestore()
-        db.collection("video_bookmarks")
-            .whereField("video_id", isEqualTo: video.id)
-            .getDocuments { [weak self] snapshot, error in
-                guard let self = self else { return }
-                
-                if let error = error {
-                    print("Error fetching bookmarks: \(error)")
-                    return
-                }
-                
-                // Update UI with bookmarks count
-                let bookmarksCount = snapshot?.documents.count ?? 0
-                self.bookmarkCountLabel.text = "\(bookmarksCount)"
-                
-                // Update video document if count has changed
-                if bookmarksCount != video.bookmarksCount {
-                    db.collection("videos").document(video.id).updateData([
-                        "bookmarks_count": bookmarksCount
-                    ])
-                }
-            }
-    }
-    
-    /// Fetches and displays the creator's avatar
-    /// - Parameter video: The video whose creator's avatar to fetch
-    private func fetchCreatorAvatar(for video: Video) {
-        let db = Firestore.firestore()
-        
-        // Fetch creator's user data
-        db.collection("users").document(video.creatorId).getDocument { [weak self] snapshot, error in
-            guard let self = self,
-                  let data = snapshot?.data(),
-                  let username = data["username"] as? String else {
-                return
-            }
-            
-            if let avatarUrl = data["avatar"] as? String,
-               let url = URL(string: avatarUrl) {
-                // Fetch avatar image
-                URLSession.shared.dataTask(with: url) { [weak self] data, response, error in
-                    if let error = error {
-                        print("Error loading avatar: \(error.localizedDescription)")
-                        // Fall back to default avatar on error
-                        DispatchQueue.main.async {
-                            self?.setupDefaultAvatar(with: username)
-                        }
-                        return
-                    }
-                    
-                    if let data = data,
-                       let image = UIImage(data: data) {
-                        DispatchQueue.main.async {
-                            // Update avatar button with fetched image
-                            self?.updateAvatarWithImage(image)
-                        }
-                    } else {
-                        // Fall back to default avatar if image data is invalid
-                        DispatchQueue.main.async {
-                            self?.setupDefaultAvatar(with: username)
-                        }
-                    }
-                }.resume()
-            } else {
-                // No avatar URL, use default avatar
-                self.setupDefaultAvatar(with: username)
-            }
-        }
-    }
-    
-    /// Updates the avatar button with an image
-    /// - Parameter image: The image to display
-    private func updateAvatarWithImage(_ image: UIImage) {
-        // Clear existing content
-        creatorAvatarButton.subviews.forEach { $0.removeFromSuperview() }
-        creatorAvatarButton.backgroundColor = .clear
-        
-        // Create and configure image view
-        let imageView = UIImageView(frame: creatorAvatarButton.bounds)
-        imageView.contentMode = .scaleAspectFill
-        imageView.clipsToBounds = true
-        imageView.image = image
-        imageView.autoresizingMask = [.flexibleWidth, .flexibleHeight]
-        
-        // Add image view to button
-        creatorAvatarButton.addSubview(imageView)
-    }
-    
-    /// Sets up a default avatar with the user's first initial
-    /// - Parameter username: The username to use for the avatar
-    private func setupDefaultAvatar(with username: String) {
-        // Clear existing content
-        creatorAvatarButton.setImage(nil, for: .normal)
-        creatorAvatarButton.subviews.forEach { $0.removeFromSuperview() }
-        
-        // Create label with first initial
-        let firstLetter = String(username.prefix(1)).uppercased()
-        let label = UILabel()
-        label.text = firstLetter
-        label.textAlignment = .center
-        label.textColor = .white
-        label.font = .systemFont(ofSize: 20, weight: .medium)
-        
-        // Generate consistent background color based on username
-        let hash = abs(username.hashValue)
-        let hue = CGFloat(hash % 360) / 360.0
-        creatorAvatarButton.backgroundColor = UIColor(hue: hue, saturation: 0.8, brightness: 0.8, alpha: 1.0)
-        
-        // Add and constrain the label
-        creatorAvatarButton.addSubview(label)
-        label.translatesAutoresizingMaskIntoConstraints = false
-        NSLayoutConstraint.activate([
-            label.centerXAnchor.constraint(equalTo: creatorAvatarButton.centerXAnchor),
-            label.centerYAnchor.constraint(equalTo: creatorAvatarButton.centerYAnchor)
-        ])
-    }
-    
     // MARK: - Action Methods
     
     /// Handles tap on creator's avatar
@@ -882,18 +680,66 @@ class FullScreenVideoCell: UICollectionViewCell {
         delegate?.didTapShare(for: video)
     }
     
-    /// Fetches and updates the comments count for a video
-    private func fetchCommentsCount(for video: Video) {
-        let db = Firestore.firestore()
-        db.collection("video_comments")
-            .whereField("video_id", isEqualTo: video.id)
-            .getDocuments { [weak self] snapshot, error in
-                guard let self = self else { return }
-                let count = snapshot?.documents.count ?? 0
-                DispatchQueue.main.async {
-                    self.commentCountLabel.text = "\(count)"
-                }
+    /// Animates the like button state change
+    func animateLikeButton(isLiked: Bool) {
+        UIView.animate(withDuration: 0.15, animations: {
+            self.likeButton.transform = CGAffineTransform(scaleX: 0.8, y: 0.8)
+        }) { _ in
+            UIView.animate(withDuration: 0.25, delay: 0, usingSpringWithDamping: 0.5, initialSpringVelocity: 0.5, options: .curveEaseInOut) {
+                self.likeButton.transform = CGAffineTransform.identity
+                self.likeButton.tintColor = isLiked ? .systemRed : .white
             }
+        }
+    }
+    
+    /// Animates the bookmark button state change
+    private func animateBookmarkButton(isBookmarked: Bool) {
+        UIView.animate(withDuration: 0.15, animations: {
+            self.bookmarkButton.transform = CGAffineTransform(scaleX: 0.8, y: 0.8)
+        }) { _ in
+            UIView.animate(withDuration: 0.25, delay: 0, usingSpringWithDamping: 0.5, initialSpringVelocity: 0.5, options: .curveEaseInOut) {
+                self.bookmarkButton.transform = CGAffineTransform.identity
+                self.bookmarkButton.tintColor = isBookmarked ? .systemYellow : .white
+            }
+        }
+    }
+    
+    /// Updates the avatar button with an image
+    private func updateAvatarWithImage(_ image: UIImage) {
+        creatorAvatarButton.subviews.forEach { $0.removeFromSuperview() }
+        creatorAvatarButton.backgroundColor = .clear
+        
+        let imageView = UIImageView(frame: creatorAvatarButton.bounds)
+        imageView.contentMode = .scaleAspectFill
+        imageView.clipsToBounds = true
+        imageView.image = image
+        imageView.autoresizingMask = [.flexibleWidth, .flexibleHeight]
+        
+        creatorAvatarButton.addSubview(imageView)
+    }
+    
+    /// Sets up a default avatar with the user's first initial
+    private func setupDefaultAvatar(with username: String) {
+        creatorAvatarButton.setImage(nil, for: .normal)
+        creatorAvatarButton.subviews.forEach { $0.removeFromSuperview() }
+        
+        let firstLetter = String(username.prefix(1)).uppercased()
+        let label = UILabel()
+        label.text = firstLetter
+        label.textAlignment = .center
+        label.textColor = .white
+        label.font = .systemFont(ofSize: 20, weight: .medium)
+        
+        let hash = abs(username.hashValue)
+        let hue = CGFloat(hash % 360) / 360.0
+        creatorAvatarButton.backgroundColor = UIColor(hue: hue, saturation: 0.8, brightness: 0.8, alpha: 1.0)
+        
+        creatorAvatarButton.addSubview(label)
+        label.translatesAutoresizingMaskIntoConstraints = false
+        NSLayoutConstraint.activate([
+            label.centerXAnchor.constraint(equalTo: creatorAvatarButton.centerXAnchor),
+            label.centerYAnchor.constraint(equalTo: creatorAvatarButton.centerYAnchor)
+        ])
     }
 }
 
@@ -1053,32 +899,30 @@ class VideoScrollContentViewController: UIViewController, UICollectionViewDelega
         print("🎯 CollectionView setup complete")
     }
     
+    /// Fetches videos with all necessary metadata in one go
     private func fetchVideos(isInitialFetch: Bool = true) {
         guard !isLoadingMore && (isInitialFetch || hasMoreVideos) else { return }
         
         isLoadingMore = true
         print("\n🔍 ====== FETCHING VIDEOS ======")
-        print("🔍 Starting to fetch videos from Firestore")
         
         let db = Firestore.firestore()
         var query = db.collection("videos")
             .order(by: "created_at", descending: true)
             .limit(to: batchSize)
         
-        // If not initial fetch, start after the last document
         if !isInitialFetch, let lastDoc = lastDocument {
             query = query.start(afterDocument: lastDoc)
         }
         
-        // Remove previous listener if this is an initial fetch
         if isInitialFetch {
-            videosListener?.remove()
+            VideosCache.shared.clear()
             videos.removeAll()
             collectionView.reloadData()
         }
         
-        // Add real-time listener
-        videosListener = query.addSnapshotListener { [weak self] snapshot, error in
+        // Step 1: Fetch videos
+        query.getDocuments { [weak self] snapshot, error in
             guard let self = self else { return }
             
             if let error = error {
@@ -1094,31 +938,83 @@ class VideoScrollContentViewController: UIViewController, UICollectionViewDelega
                 return
             }
             
-            // Update last document for pagination
             self.lastDocument = documents.last
             
-            // Process the new videos
-            let newVideos = documents.compactMap { document -> Video? in
-                guard let video = Video(from: document) else {
-                    print("⚠️ Invalid document data for id: \(document.documentID)")
-                    return nil
+            // Create videos with basic info
+            let newVideos = documents.compactMap { Video(from: $0) }
+            
+            // Step 2: Fetch creator info
+            let creatorIds = Set(newVideos.map { $0.creatorId })
+            let group = DispatchGroup()
+            
+            for creatorId in creatorIds {
+                if VideosCache.shared.getCreatorInfo(userId: creatorId) != nil { continue }
+                
+                group.enter()
+                db.collection("users").document(creatorId).getDocument { snapshot, error in
+                    defer { group.leave() }
+                    
+                    if let data = snapshot?.data(),
+                       let username = data["username"] as? String {
+                        let avatarURL = data["avatar"] as? String
+                        VideosCache.shared.cacheCreatorInfo(userId: creatorId, username: username, avatarURL: avatarURL)
+                    }
                 }
-                return video
             }
             
-            // Update the videos array
-            if isInitialFetch {
-                self.videos = newVideos
-            } else {
-                // Append only new videos that aren't already in the array
-                let existingIds = Set(self.videos.map { $0.id })
-                let uniqueNewVideos = newVideos.filter { !existingIds.contains($0.id) }
-                self.videos.append(contentsOf: uniqueNewVideos)
+            // Step 3: Fetch interaction status for current user
+            if let currentUserId = Auth.auth().currentUser?.uid {
+                for video in newVideos {
+                    group.enter()
+                    let likeRef = db.collection("video_likes").document("\(video.id)_\(currentUserId)")
+                    let bookmarkRef = db.collection("video_bookmarks").document("\(video.id)_\(currentUserId)")
+                    
+                    let interactionGroup = DispatchGroup()
+                    var isLiked = false
+                    var isBookmarked = false
+                    
+                    interactionGroup.enter()
+                    likeRef.getDocument { snapshot, _ in
+                        isLiked = snapshot?.exists == true
+                        interactionGroup.leave()
+                    }
+                    
+                    interactionGroup.enter()
+                    bookmarkRef.getDocument { snapshot, _ in
+                        isBookmarked = snapshot?.exists == true
+                        interactionGroup.leave()
+                    }
+                    
+                    interactionGroup.notify(queue: .main) {
+                        if let creatorInfo = VideosCache.shared.getCreatorInfo(userId: video.creatorId) {
+                            let metadata = VideoMetadata(
+                                creatorUsername: creatorInfo.username,
+                                creatorAvatarURL: creatorInfo.avatarURL,
+                                likesCount: video.likesCount,
+                                bookmarksCount: video.bookmarksCount,
+                                commentsCount: video.commentsCount,
+                                isLikedByCurrentUser: isLiked,
+                                isBookmarkedByCurrentUser: isBookmarked
+                            )
+                            video.updateMetadata(metadata)
+                        }
+                        VideosCache.shared.cacheVideo(video)
+                        group.leave()
+                    }
+                }
             }
             
-            print("\n🎯 Total videos: \(self.videos.count)")
-            
-            DispatchQueue.main.async {
+            // Step 4: Update UI when all data is ready
+            group.notify(queue: .main) {
+                if isInitialFetch {
+                    self.videos = newVideos
+                } else {
+                    let existingIds = Set(self.videos.map { $0.id })
+                    let uniqueNewVideos = newVideos.filter { !existingIds.contains($0.id) }
+                    self.videos.append(contentsOf: uniqueNewVideos)
+                }
+                
+                print("\n🎯 Total videos: \(self.videos.count)")
                 self.collectionView.reloadData()
                 self.isLoadingMore = false
             }
@@ -1432,7 +1328,6 @@ extension VideoScrollContentViewController: FullScreenVideoCellDelegate {
     /// Handles tapping on the creator's avatar
     /// - Parameter video: The video whose creator was tapped
     func didTapCreatorAvatar(for video: Video) {
-        // Create and present creator's profile view controller
         let profileVC = PublicProfileViewController()
         profileVC.userId = video.creatorId
         profileVC.modalPresentationStyle = .fullScreen
@@ -1445,39 +1340,39 @@ extension VideoScrollContentViewController: FullScreenVideoCellDelegate {
     func didTapLike(for video: Video) {
         guard let currentUserId = Auth.auth().currentUser?.uid else { return }
         
-        let db = Firestore.firestore()
-        let likeRef = db.collection("video_likes").document("\(video.id)_\(currentUserId)")
-        
-        // Find the cell for this video
+        // Find the cell and update UI optimistically
         if let visibleCell = findVisibleCell(for: video) {
-            likeRef.getDocument { [weak self] snapshot, error in
-                guard let exists = snapshot?.exists else { return }
-                
-                if exists {
-                    // Unlike video
-                    visibleCell.animateLikeButton(isLiked: false)
-                    likeRef.delete { error in
-                        if error == nil {
-                            visibleCell.fetchLikesCount(for: video)
-                        } else {
-                            // Revert animation on error
-                            visibleCell.animateLikeButton(isLiked: true)
-                        }
+            let isCurrentlyLiked = video.isLikedByCurrentUser
+            let newLikeState = !isCurrentlyLiked
+            
+            // Update UI optimistically
+            video.updateLikeStatus(isLiked: newLikeState)
+            visibleCell.updateUI(with: video)
+            
+            // Update Firebase in background
+            let db = Firestore.firestore()
+            let likeRef = db.collection("video_likes").document("\(video.id)_\(currentUserId)")
+            
+            if newLikeState {
+                likeRef.setData([
+                    "video_id": video.id,
+                    "user_id": currentUserId,
+                    "created_at": FieldValue.serverTimestamp()
+                ]) { [weak self] error in
+                    if let error = error {
+                        // Revert on error
+                        print("❌ Error liking video: \(error.localizedDescription)")
+                        video.updateLikeStatus(isLiked: isCurrentlyLiked)
+                        visibleCell.updateUI(with: video)
                     }
-                } else {
-                    // Like video
-                    visibleCell.animateLikeButton(isLiked: true)
-                    likeRef.setData([
-                        "video_id": video.id,
-                        "user_id": currentUserId,
-                        "created_at": FieldValue.serverTimestamp()
-                    ]) { error in
-                        if error == nil {
-                            visibleCell.fetchLikesCount(for: video)
-                        } else {
-                            // Revert animation on error
-                            visibleCell.animateLikeButton(isLiked: false)
-                        }
+                }
+            } else {
+                likeRef.delete { [weak self] error in
+                    if let error = error {
+                        // Revert on error
+                        print("❌ Error unliking video: \(error.localizedDescription)")
+                        video.updateLikeStatus(isLiked: isCurrentlyLiked)
+                        visibleCell.updateUI(with: video)
                     }
                 }
             }
@@ -1500,25 +1395,22 @@ extension VideoScrollContentViewController: FullScreenVideoCellDelegate {
     /// Handles tapping the comment button
     /// - Parameter video: The video to show comments for
     func didTapComment(for video: Video) {
-        // Create and configure comments view controller
         let commentsVC = CommentsViewController()
         commentsVC.videoId = video.id
         commentsVC.modalPresentationStyle = .overFullScreen
         
-        // Configure comment count update handlers
+        // Handle comment count updates optimistically
         commentsVC.onCommentAdded = { [weak self] in
-            // Optimistically update comment count
+            video.updateCommentCount(delta: 1)
             if let cell = self?.findVisibleCell(for: video) {
-                let currentCount = Int(cell.commentCountLabel.text ?? "0") ?? 0
-                cell.commentCountLabel.text = "\(currentCount + 1)"
+                cell.updateUI(with: video)
             }
         }
         
         commentsVC.onCommentDeleted = { [weak self] in
-            // Optimistically update comment count
+            video.updateCommentCount(delta: -1)
             if let cell = self?.findVisibleCell(for: video) {
-                let currentCount = Int(cell.commentCountLabel.text ?? "0") ?? 0
-                cell.commentCountLabel.text = "\(max(0, currentCount - 1))"
+                cell.updateUI(with: video)
             }
         }
         
@@ -1530,39 +1422,39 @@ extension VideoScrollContentViewController: FullScreenVideoCellDelegate {
     func didTapBookmark(for video: Video) {
         guard let currentUserId = Auth.auth().currentUser?.uid else { return }
         
-        let db = Firestore.firestore()
-        let bookmarkRef = db.collection("video_bookmarks").document("\(video.id)_\(currentUserId)")
-        
-        // Find the cell for this video
+        // Find the cell and update UI optimistically
         if let visibleCell = findVisibleCell(for: video) {
-            bookmarkRef.getDocument { [weak self] snapshot, error in
-                guard let exists = snapshot?.exists else { return }
-                
-                if exists {
-                    // Remove bookmark
-                    visibleCell.animateBookmarkButton(isBookmarked: false)
-                    bookmarkRef.delete { error in
-                        if error == nil {
-                            visibleCell.fetchBookmarksCount(for: video)
-                        } else {
-                            // Revert animation on error
-                            visibleCell.animateBookmarkButton(isBookmarked: true)
-                        }
+            let isCurrentlyBookmarked = video.isBookmarkedByCurrentUser
+            let newBookmarkState = !isCurrentlyBookmarked
+            
+            // Update UI optimistically
+            video.updateBookmarkStatus(isBookmarked: newBookmarkState)
+            visibleCell.updateUI(with: video)
+            
+            // Update Firebase in background
+            let db = Firestore.firestore()
+            let bookmarkRef = db.collection("video_bookmarks").document("\(video.id)_\(currentUserId)")
+            
+            if newBookmarkState {
+                bookmarkRef.setData([
+                    "video_id": video.id,
+                    "user_id": currentUserId,
+                    "created_at": FieldValue.serverTimestamp()
+                ]) { [weak self] error in
+                    if let error = error {
+                        // Revert on error
+                        print("❌ Error bookmarking video: \(error.localizedDescription)")
+                        video.updateBookmarkStatus(isBookmarked: isCurrentlyBookmarked)
+                        visibleCell.updateUI(with: video)
                     }
-                } else {
-                    // Add bookmark
-                    visibleCell.animateBookmarkButton(isBookmarked: true)
-                    bookmarkRef.setData([
-                        "video_id": video.id,
-                        "user_id": currentUserId,
-                        "created_at": FieldValue.serverTimestamp()
-                    ]) { error in
-                        if error == nil {
-                            visibleCell.fetchBookmarksCount(for: video)
-                        } else {
-                            // Revert animation on error
-                            visibleCell.animateBookmarkButton(isBookmarked: false)
-                        }
+                }
+            } else {
+                bookmarkRef.delete { [weak self] error in
+                    if let error = error {
+                        // Revert on error
+                        print("❌ Error unbookmarking video: \(error.localizedDescription)")
+                        video.updateBookmarkStatus(isBookmarked: isCurrentlyBookmarked)
+                        visibleCell.updateUI(with: video)
                     }
                 }
             }
@@ -1572,7 +1464,6 @@ extension VideoScrollContentViewController: FullScreenVideoCellDelegate {
     /// Handles tapping the share button
     /// - Parameter video: The video to share
     func didTapShare(for video: Video) {
-        // Create and present share sheet
         let items = [URL(string: video.storagePath)].compactMap { $0 }
         let ac = UIActivityViewController(activityItems: items, applicationActivities: nil)
         present(ac, animated: true)

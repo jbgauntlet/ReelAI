@@ -57,6 +57,7 @@
 		6FB758E62D558D2D00ECB2C6 /* ChatViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6FB758E52D558D2D00ECB2C6 /* ChatViewController.swift */; };
 		6FB758E92D558D4000ECB2C6 /* Message.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6FB758E72D558D4000ECB2C6 /* Message.swift */; };
 		6FB758EA2D558D4000ECB2C6 /* Conversation.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6FB758E82D558D4000ECB2C6 /* Conversation.swift */; };
+		6FB758F12D566A5E00ECB2C6 /* VideosCache.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6FB758F02D566A5E00ECB2C6 /* VideosCache.swift */; };
 		6FC41CA52D512CD7003849BC /* User.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6FC41CA42D512CD7003849BC /* User.swift */; };
 		6FC41CB42D5144DF003849BC /* GoogleService-Info.plist in Resources */ = {isa = PBXBuildFile; fileRef = 6FC41CB32D5144DF003849BC /* GoogleService-Info.plist */; };
 		6FC41CB72D5146DF003849BC /* FirebaseAnalytics in Frameworks */ = {isa = PBXBuildFile; productRef = 6FC41CB62D5146DF003849BC /* FirebaseAnalytics */; };
@@ -143,6 +144,7 @@
 		6FB758E52D558D2D00ECB2C6 /* ChatViewController.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ChatViewController.swift; sourceTree = "<group>"; };
 		6FB758E72D558D4000ECB2C6 /* Message.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = Message.swift; sourceTree = "<group>"; };
 		6FB758E82D558D4000ECB2C6 /* Conversation.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = Conversation.swift; sourceTree = "<group>"; };
+		6FB758F02D566A5E00ECB2C6 /* VideosCache.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = VideosCache.swift; sourceTree = "<group>"; };
 		6FC41CA42D512CD7003849BC /* User.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = User.swift; sourceTree = "<group>"; };
 		6FC41CB32D5144DF003849BC /* GoogleService-Info.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; path = "GoogleService-Info.plist"; sourceTree = "<group>"; };
 		6FC69C7A2D5205830020CF09 /* Video.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; name = Video.swift; path = ReelAI/Models/Video.swift; sourceTree = SOURCE_ROOT; };
@@ -246,6 +248,7 @@
 				6FB758D02D55696500ECB2C6 /* Notification.swift */,
 				6F216C342D53D906000ED151 /* FieldType.swift */,
 				6FC69C7A2D5205830020CF09 /* Video.swift */,
+				6FB758F02D566A5E00ECB2C6 /* VideosCache.swift */,
 				6FC41CA42D512CD7003849BC /* User.swift */,
 				6FC69C892D52AA1C0020CF09 /* Comment.swift */,
 			);
@@ -507,6 +510,7 @@
 				6FB758EA2D558D4000ECB2C6 /* Conversation.swift in Sources */,
 				6FC69C882D52A67A0020CF09 /* CommentsViewController.swift in Sources */,
 				6F3544102D54FF6900B83129 /* PostVideoViewController.swift in Sources */,
+				6FB758F12D566A5E00ECB2C6 /* VideosCache.swift in Sources */,
 				6FB758E42D558CBC00ECB2C6 /* ConversationCell.swift in Sources */,
 				04FB121C2C70C65E00A1C209 /* CustomView.swift in Sources */,
 				6F35440C2D54617400B83129 /* ColorPalette.swift in Sources */,
