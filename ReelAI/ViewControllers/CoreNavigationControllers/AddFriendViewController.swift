@@ -132,9 +132,15 @@ class AddFriendViewController: UIViewController {
             .limit(to: 5)
         
         // Then try partial matches with username_lowercase
-        let partialQuery = db.collection("users")
+        let usernameQuery = db.collection("users")
             .whereField("username_lowercase", isGreaterThanOrEqualTo: lowercaseQuery)
             .whereField("username_lowercase", isLessThan: lowercaseQuery + "\u{f8ff}")
+            .limit(to: 5)
+        
+        // Also try partial matches with name_lowercase
+        let nameQuery = db.collection("users")
+            .whereField("name_lowercase", isGreaterThanOrEqualTo: lowercaseQuery)
+            .whereField("name_lowercase", isLessThan: lowercaseQuery + "\u{f8ff}")
             .limit(to: 5)
         
         // Debug: Let's also try a simple query to get all users
@@ -165,17 +171,37 @@ class AddFriendViewController: UIViewController {
         }
         
         group.enter()
-        partialQuery.getDocuments { [weak self] snapshot, error in
+        usernameQuery.getDocuments { [weak self] snapshot, error in
             defer { group.leave() }
             if let error = error {
-                print("❌ Partial query error: \(error.localizedDescription)")
+                print("❌ Username query error: \(error.localizedDescription)")
                 return
             }
             if let documents = snapshot?.documents {
-                print("📄 Partial query found \(documents.count) results")
+                print("📄 Username query found \(documents.count) results")
                 documents.forEach { document in
                     if document.documentID != currentUserId {
-                        print("📝 Partial match document data: \(document.data())")
+                        print("📝 Username match document data: \(document.data())")
+                        if let user = User(from: document.data(), uid: document.documentID) {
+                            allResults.insert(user)
+                        }
+                    }
+                }
+            }
+        }
+        
+        group.enter()
+        nameQuery.getDocuments { [weak self] snapshot, error in
+            defer { group.leave() }
+            if let error = error {
+                print("❌ Name query error: \(error.localizedDescription)")
+                return
+            }
+            if let documents = snapshot?.documents {
+                print("📄 Name query found \(documents.count) results")
+                documents.forEach { document in
+                    if document.documentID != currentUserId {
+                        print("📝 Name match document data: \(document.data())")
                         if let user = User(from: document.data(), uid: document.documentID) {
                             allResults.insert(user)
                         }
@@ -198,6 +224,8 @@ class AddFriendViewController: UIViewController {
                     print("📝 User document: \(document.documentID)")
                     print("   username: \(document.data()["username"] ?? "nil")")
                     print("   username_lowercase: \(document.data()["username_lowercase"] ?? "nil")")
+                    print("   name: \(document.data()["name"] ?? "nil")")
+                    print("   name_lowercase: \(document.data()["name_lowercase"] ?? "nil")")
                 }
             }
         }

@@ -187,6 +187,24 @@ class ProfileViewController: UIViewController {
         return button
     }()
     
+    private let notificationButton: UIButton = {
+        let button = UIButton(type: .system)
+        let config = UIImage.SymbolConfiguration(pointSize: 20, weight: .medium)
+        button.setImage(UIImage(systemName: "bell.fill", withConfiguration: config), for: .normal)
+        button.tintColor = .black
+        button.translatesAutoresizingMaskIntoConstraints = false
+        return button
+    }()
+    
+    private let unreadBadge: UIView = {
+        let view = UIView()
+        view.backgroundColor = .systemRed
+        view.layer.cornerRadius = 5
+        view.isHidden = true
+        view.translatesAutoresizingMaskIntoConstraints = false
+        return view
+    }()
+    
     // MARK: - Lifecycle
     override func viewDidLoad() {
         super.viewDidLoad()
@@ -234,6 +252,8 @@ class ProfileViewController: UIViewController {
         sectionSelector.selectedSegmentIndex = 0
         
         view.addSubview(optionsButton)
+        view.addSubview(notificationButton)
+        notificationButton.addSubview(unreadBadge)
         
         videoCollectionView.delegate = self
         videoCollectionView.dataSource = self
@@ -282,7 +302,17 @@ class ProfileViewController: UIViewController {
             optionsButton.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor, constant: 0),
             optionsButton.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -16),
             optionsButton.widthAnchor.constraint(equalToConstant: 44),
-            optionsButton.heightAnchor.constraint(equalToConstant: 44)
+            optionsButton.heightAnchor.constraint(equalToConstant: 44),
+            
+            notificationButton.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor, constant: 0),
+            notificationButton.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: 16),
+            notificationButton.widthAnchor.constraint(equalToConstant: 44),
+            notificationButton.heightAnchor.constraint(equalToConstant: 44),
+            
+            unreadBadge.topAnchor.constraint(equalTo: notificationButton.topAnchor, constant: 2),
+            unreadBadge.trailingAnchor.constraint(equalTo: notificationButton.trailingAnchor, constant: -2),
+            unreadBadge.widthAnchor.constraint(equalToConstant: 10),
+            unreadBadge.heightAnchor.constraint(equalToConstant: 10)
         ])
     }
     
@@ -297,6 +327,7 @@ class ProfileViewController: UIViewController {
         addFriendButton.addTarget(self, action: #selector(addFriendTapped), for: .touchUpInside)
         addBioButton.addTarget(self, action: #selector(addBioTapped), for: .touchUpInside)
         optionsButton.addTarget(self, action: #selector(optionsButtonTapped), for: .touchUpInside)
+        notificationButton.addTarget(self, action: #selector(notificationButtonTapped), for: .touchUpInside)
     }
     
     // MARK: - Actions
@@ -332,6 +363,12 @@ class ProfileViewController: UIViewController {
             }
         }
         present(optionsVC, animated: true)
+    }
+    
+    @objc private func notificationButtonTapped() {
+        let notificationsVC = NotificationsViewController()
+        notificationsVC.modalPresentationStyle = .fullScreen
+        present(notificationsVC, animated: true)
     }
     
     @objc private func statTapped(_ gesture: UITapGestureRecognizer) {
@@ -634,6 +671,11 @@ class ProfileViewController: UIViewController {
             label.centerXAnchor.constraint(equalTo: avatarImageView.centerXAnchor),
             label.centerYAnchor.constraint(equalTo: avatarImageView.centerYAnchor)
         ])
+    }
+    
+    // Add method to update unread badge
+    func updateUnreadBadge(hasUnread: Bool) {
+        unreadBadge.isHidden = !hasUnread
     }
 }
 

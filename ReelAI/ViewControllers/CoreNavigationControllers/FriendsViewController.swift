@@ -3,7 +3,7 @@ import FirebaseAuth
 import FirebaseFirestore
 
 class FriendsViewController: UIViewController {
-    
+
     // MARK: - Properties
     private var friends: [User] = []
     private var filteredFriends: [User] = []
