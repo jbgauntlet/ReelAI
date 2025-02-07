@@ -1263,10 +1263,6 @@ class VideoScrollContentViewController: UIViewController, UICollectionViewDelega
                 existingCell.restart()  // Use restart for initial playback
                 currentlyPlayingCell = existingCell
                 
-                // Track video view when cell becomes visible and starts playing
-                print("📊 About to track video view for newly visible cell")
-                trackVideoView(video)
-                
                 // Prefetch adjacent videos
                 prefetchAdjacentVideos(for: indexPath.item)
             }
@@ -1289,6 +1285,17 @@ class VideoScrollContentViewController: UIViewController, UICollectionViewDelega
         )
     }
     
+    func collectionView(_ collectionView: UICollectionView, willDisplay cell: UICollectionViewCell, forItemAt indexPath: IndexPath) {
+        print("\n📱 Cell will display at index: \(indexPath.item)")
+        guard let videoCell = cell as? FullScreenVideoCell else { return }
+        
+        // Track video view when cell becomes visible
+        if indexPath.item < videos.count {
+            print("📊 Tracking video view for newly visible cell")
+            trackVideoView(videos[indexPath.item])
+        }
+    }
+
     func collectionView(_ collectionView: UICollectionView, cellForItemAt indexPath: IndexPath) -> UICollectionViewCell {
         print("\n🔄 Creating/reusing cell at index: \(indexPath.item)")
         guard let cell = collectionView.dequeueReusableCell(withReuseIdentifier: FullScreenVideoCell.identifier, for: indexPath) as? FullScreenVideoCell else {
