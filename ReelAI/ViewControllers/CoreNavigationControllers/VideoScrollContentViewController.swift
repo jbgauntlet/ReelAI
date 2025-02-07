@@ -541,6 +541,12 @@ class FullScreenVideoCell: UICollectionViewCell {
     /// Handles video playback completion
     @objc private func playerItemDidReachEnd() {
         print("🔄 Video reached end in cell \(cellId), looping...")
+        restart()  // Use restart instead of seeking and playing separately
+    }
+    
+    /// Restarts video from beginning and plays
+    func restart() {
+        print("🔄 Restarting video in cell \(cellId)")
         player?.seek(to: .zero)
         player?.play()
     }
@@ -548,7 +554,6 @@ class FullScreenVideoCell: UICollectionViewCell {
     /// Starts video playback
     func play() {
         print("▶️ Playing video in cell \(cellId)")
-        player?.seek(to: .zero)
         player?.play()
     }
     
@@ -894,7 +899,7 @@ struct VideoLoadingWindow {
 }
 
 // MARK: - VideoScrollContentViewController Implementation
-class VideoScrollContentViewController: UIViewController {
+class VideoScrollContentViewController: UIViewController, UICollectionViewDelegate, UICollectionViewDataSource, UICollectionViewDelegateFlowLayout {
     // MARK: - Properties
     
     /// Array of videos to display
@@ -1161,7 +1166,7 @@ class VideoScrollContentViewController: UIViewController {
             if visibleRect.intersects(cellRect) {
                 print("▶️ Cell is visible, playing video")
                 currentlyPlayingCell?.pause()
-                existingCell.play()
+                existingCell.restart()  // Use restart for initial playback
                 currentlyPlayingCell = existingCell
                 
                 // Prefetch adjacent videos
@@ -1203,7 +1208,7 @@ class VideoScrollContentViewController: UIViewController {
         if visibleRect.intersects(cellRect) {
             print("▶️ New cell is visible, playing video")
             currentlyPlayingCell?.pause()
-            cell.play()
+            cell.restart()  // Use restart for initial playback
             currentlyPlayingCell = cell
         }
         
@@ -1219,7 +1224,7 @@ class VideoScrollContentViewController: UIViewController {
            let cell = collectionView.cellForItem(at: indexPath) as? FullScreenVideoCell {
             print("📱 Switching to video at index: \(indexPath.item)")
             currentlyPlayingCell?.pause()
-            cell.play()
+            cell.restart()  // Use restart when switching to a new video
             currentlyPlayingCell = cell
             
             // Update loading window and perform cleanup
@@ -1246,7 +1251,7 @@ class VideoScrollContentViewController: UIViewController {
            let firstCell = collectionView.cellForItem(at: firstVisibleIndexPath) as? FullScreenVideoCell {
             print("\n▶️ Playing first visible video at index \(firstVisibleIndexPath.item)")
             currentlyPlayingCell?.pause()
-            firstCell.play()
+            firstCell.restart()  // Use restart for initial playback
             currentlyPlayingCell = firstCell
         }
     }
