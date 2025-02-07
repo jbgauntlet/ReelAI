@@ -154,9 +154,6 @@ class VideoScrollFeedViewController: UIViewController {
                 existingCell.restart()
                 currentlyPlayingCell = existingCell
                 
-                // Track video view
-                trackVideoView(video)
-                
                 // Prefetch adjacent videos
                 prefetchAdjacentVideos(for: indexPath.item)
             }
@@ -346,9 +343,6 @@ extension VideoScrollFeedViewController: UICollectionViewDataSource, UICollectio
             currentlyPlayingCell?.pause()
             cell.play()
             currentlyPlayingCell = cell
-            
-            // Track video view
-            trackVideoView(videos[indexPath.item])
         }
         
         return cell
@@ -366,6 +360,12 @@ extension VideoScrollFeedViewController: UICollectionViewDataSource, UICollectio
             configureVideoCell(at: indexPath)
             updateLoadingWindow()
         }
+    }
+    
+    // MARK: - UICollectionView Display
+    func collectionView(_ collectionView: UICollectionView, willDisplay cell: UICollectionViewCell, forItemAt indexPath: IndexPath) {
+        guard indexPath.item < videos.count else { return }
+        trackVideoView(videos[indexPath.item])
     }
 }
 

@@ -579,7 +579,7 @@ class ProfileViewController: UIViewController {
         case .watchHistory:
             print("⏳ Fetching watch history")
             // Get videos from viewed_videos collection
-            db.collection("viewed_videos")
+            db.collection("video_views")
                 .whereField("user_id", isEqualTo: userId)
                 .order(by: "last_viewed", descending: true) // Show most recently viewed first
                 .getDocuments { [weak self] snapshot, error in
@@ -592,7 +592,44 @@ class ProfileViewController: UIViewController {
                     
                     print("✅ Found \(documents.count) watched videos")
                     let videoIds = documents.compactMap { $0.data()["video_id"] as? String }
-                    self?.fetchVideosByIds(videoIds)
+                    
+                    // Fetch videos and filter out any that don't exist anymore
+                    let group = DispatchGroup()
+                    var existingVideos: [Video] = []
+                    
+                    for videoId in videoIds {
+                        group.enter()
+                        db.collection("videos").document(videoId).getDocument { snapshot, error in
+                            defer { group.leave() }
+                            
+                            if let error = error {
+                                print("❌ Error fetching video \(videoId): \(error.localizedDescription)")
+                                return
+                            }
+                            
+                            if let document = snapshot,
+                               document.exists,
+                               let video = Video(from: document) {
+                                existingVideos.append(video)
+                                print("✅ Successfully fetched video: \(videoId)")
+                            } else {
+                                print("⚠️ Video \(videoId) no longer exists")
+                                // Optionally: Clean up the view record for non-existent video
+                                let viewRef = db.collection("video_views").document("\(videoId)_\(userId)")
+                                viewRef.delete { error in
+                                    if let error = error {
+                                        print("❌ Error cleaning up view record: \(error.localizedDescription)")
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    
+                    group.notify(queue: .main) {
+                        print("🎬 Finished fetching watch history. Found \(existingVideos.count) existing videos")
+                        self?.videos = existingVideos
+                        self?.videoCollectionView.reloadData()
+                    }
                 }
         }
     }
