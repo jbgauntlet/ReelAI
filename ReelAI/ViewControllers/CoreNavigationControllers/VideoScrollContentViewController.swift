@@ -150,6 +150,19 @@ class FullScreenVideoCell: UICollectionViewCell {
         return imageView
     }()
     
+    /// Progress slider for video playback
+    private let progressSlider: UISlider = {
+        let slider = UISlider()
+        slider.minimumTrackTintColor = .white
+        slider.maximumTrackTintColor = .gray.withAlphaComponent(0.5)
+        slider.setThumbImage(UIImage(), for: .normal) // Hide thumb for cleaner look
+        slider.translatesAutoresizingMaskIntoConstraints = false
+        return slider
+    }()
+    
+    /// Time observer for updating progress slider
+    private var timeObserver: Any?
+    
     // MARK: - Action Bar UI Components
     
     /// Container view for action buttons (like, comment, share)
@@ -313,11 +326,17 @@ class FullScreenVideoCell: UICollectionViewCell {
         contentView.addSubview(playerView)
         contentView.addSubview(loadingIndicator)
         contentView.addSubview(playPauseOverlay)
+        contentView.addSubview(progressSlider)
         setupInfoPanel()
         
         // Add tap gesture recognizer
         playerView.addGestureRecognizer(tapGesture)
         playerView.isUserInteractionEnabled = true
+        
+        // Add slider action
+        progressSlider.addTarget(self, action: #selector(sliderValueChanged(_:)), for: .valueChanged)
+        progressSlider.addTarget(self, action: #selector(sliderTouchBegan(_:)), for: .touchDown)
+        progressSlider.addTarget(self, action: #selector(sliderTouchEnded(_:)), for: [.touchUpInside, .touchUpOutside])
         
         // Set up constraints
         NSLayoutConstraint.activate([
@@ -332,7 +351,12 @@ class FullScreenVideoCell: UICollectionViewCell {
             playPauseOverlay.centerXAnchor.constraint(equalTo: contentView.centerXAnchor),
             playPauseOverlay.centerYAnchor.constraint(equalTo: contentView.centerYAnchor),
             playPauseOverlay.widthAnchor.constraint(equalToConstant: 80),
-            playPauseOverlay.heightAnchor.constraint(equalToConstant: 80)
+            playPauseOverlay.heightAnchor.constraint(equalToConstant: 80),
+            
+            progressSlider.leadingAnchor.constraint(equalTo: contentView.leadingAnchor),
+            progressSlider.trailingAnchor.constraint(equalTo: contentView.trailingAnchor),
+            progressSlider.bottomAnchor.constraint(equalTo: contentView.bottomAnchor),
+            progressSlider.heightAnchor.constraint(equalToConstant: 2) // Thin line
         ])
     }
     
@@ -581,6 +605,19 @@ class FullScreenVideoCell: UICollectionViewCell {
             print("❌ Failed to set audio session category: \(error)")
         }
         
+        // Add periodic time observer for updating slider
+        let interval = CMTime(seconds: 0.1, preferredTimescale: CMTimeScale(NSEC_PER_SEC))
+        timeObserver = player.addPeriodicTimeObserver(forInterval: interval, queue: .main) { [weak self] time in
+            guard let self = self,
+                  let duration = self.player?.currentItem?.duration,
+                  !duration.isIndefinite else {
+                return
+            }
+            
+            let progress = Float(time.seconds / duration.seconds)
+            self.progressSlider.value = progress
+        }
+        
         loadingIndicator.stopAnimating()
         print("🎥 Player setup complete for cell \(cellId)")
     }
@@ -684,11 +721,22 @@ class FullScreenVideoCell: UICollectionViewCell {
         
         // Clean up UI
         creatorAvatarButton.subviews.forEach { $0.removeFromSuperview() }
+        
+        // Remove time observer
+        if let timeObserver = timeObserver {
+            player?.removeTimeObserver(timeObserver)
+            self.timeObserver = nil
+        }
     }
     
     /// Cleanup when cell is deallocated
     deinit {
         print("🗑️ VideoCell \(cellId) being deallocated")
+        
+        // Remove time observer
+        if let timeObserver = timeObserver {
+            player?.removeTimeObserver(timeObserver)
+        }
     }
     
     // MARK: - Action Methods
@@ -783,6 +831,27 @@ class FullScreenVideoCell: UICollectionViewCell {
             label.centerXAnchor.constraint(equalTo: creatorAvatarButton.centerXAnchor),
             label.centerYAnchor.constraint(equalTo: creatorAvatarButton.centerYAnchor)
         ])
+    }
+    
+    /// Handles slider value changes during user interaction
+    @objc private func sliderValueChanged(_ slider: UISlider) {
+        guard let duration = player?.currentItem?.duration else { return }
+        let targetTime = CMTime(seconds: Double(slider.value) * duration.seconds, preferredTimescale: duration.timescale)
+        player?.seek(to: targetTime, toleranceBefore: .zero, toleranceAfter: .zero)
+    }
+    
+    /// Handles the start of user interaction with the slider
+    @objc private func sliderTouchBegan(_ slider: UISlider) {
+        // Pause video while scrubbing
+        player?.pause()
+    }
+    
+    /// Handles the end of user interaction with the slider
+    @objc private func sliderTouchEnded(_ slider: UISlider) {
+        // Resume playback if video was playing
+        if isPlaying {
+            player?.play()
+        }
     }
 }
 
