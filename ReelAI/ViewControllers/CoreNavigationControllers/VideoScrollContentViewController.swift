@@ -140,6 +140,16 @@ class FullScreenVideoCell: UICollectionViewCell {
         return indicator
     }()
     
+    /// Play/Pause icon overlay
+    private let playPauseOverlay: UIImageView = {
+        let imageView = UIImageView()
+        imageView.contentMode = .scaleAspectFit
+        imageView.alpha = 0
+        imageView.tintColor = .white
+        imageView.translatesAutoresizingMaskIntoConstraints = false
+        return imageView
+    }()
+    
     // MARK: - Action Bar UI Components
     
     /// Container view for action buttons (like, comment, share)
@@ -302,6 +312,7 @@ class FullScreenVideoCell: UICollectionViewCell {
         // Add and configure main components
         contentView.addSubview(playerView)
         contentView.addSubview(loadingIndicator)
+        contentView.addSubview(playPauseOverlay)
         setupInfoPanel()
         
         // Add tap gesture recognizer
@@ -316,7 +327,12 @@ class FullScreenVideoCell: UICollectionViewCell {
             playerView.bottomAnchor.constraint(equalTo: contentView.bottomAnchor),
             
             loadingIndicator.centerXAnchor.constraint(equalTo: contentView.centerXAnchor),
-            loadingIndicator.centerYAnchor.constraint(equalTo: contentView.centerYAnchor)
+            loadingIndicator.centerYAnchor.constraint(equalTo: contentView.centerYAnchor),
+            
+            playPauseOverlay.centerXAnchor.constraint(equalTo: contentView.centerXAnchor),
+            playPauseOverlay.centerYAnchor.constraint(equalTo: contentView.centerYAnchor),
+            playPauseOverlay.widthAnchor.constraint(equalToConstant: 80),
+            playPauseOverlay.heightAnchor.constraint(equalToConstant: 80)
         ])
     }
     
@@ -416,9 +432,36 @@ class FullScreenVideoCell: UICollectionViewCell {
         if isPlaying {
             print("⏸️ User requested pause")
             pause()
+            showPlayPauseOverlay(isPaused: true)
         } else {
             print("▶️ User requested play")
             play()
+            showPlayPauseOverlay(isPaused: false)
+        }
+    }
+    
+    /// Shows and animates the play/pause overlay
+    private func showPlayPauseOverlay(isPaused: Bool) {
+        // Configure the overlay image
+        let config = UIImage.SymbolConfiguration(pointSize: 50, weight: .medium)
+        playPauseOverlay.image = UIImage(
+            systemName: isPaused ? "pause.circle.fill" : "play.circle.fill",
+            withConfiguration: config
+        )
+        
+        // Reset any ongoing animations
+        playPauseOverlay.layer.removeAllAnimations()
+        
+        // Fade in quickly
+        UIView.animate(withDuration: 0.1, animations: {
+            self.playPauseOverlay.alpha = 1
+            self.playPauseOverlay.transform = CGAffineTransform(scaleX: 1.2, y: 1.2)
+        }) { _ in
+            // Fade out slowly
+            UIView.animate(withDuration: 0.5, delay: 0.2, options: .curveEaseOut, animations: {
+                self.playPauseOverlay.alpha = 0
+                self.playPauseOverlay.transform = .identity
+            })
         }
     }
     
