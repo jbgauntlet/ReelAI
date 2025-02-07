@@ -31,7 +31,7 @@ class MainTabBarController: UIViewController {
         let videoFeedVC = UINavigationController(rootViewController: UIViewController())
         videoFeedVC.tabBarItem = UITabBarItem(title: "", image: UIImage(named: "create-video"), tag: 2)
         
-        let uploadVC = UINavigationController(rootViewController: InboxViewController())
+        let uploadVC = UINavigationController(rootViewController: MessagesViewController())
         uploadVC.tabBarItem = UITabBarItem(title: "Inbox", image: UIImage(systemName: "bubble"), selectedImage: UIImage(systemName: "bubble.fill"))
         uploadVC.tabBarItem.tag = 3;
         

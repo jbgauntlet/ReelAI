@@ -42,7 +42,7 @@
 		6F35440E2D54C5C800B83129 /* ProfileOptionsViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6F35440D2D54C5C800B83129 /* ProfileOptionsViewController.swift */; };
 		6F3544102D54FF6900B83129 /* PostVideoViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6F35440F2D54FF6900B83129 /* PostVideoViewController.swift */; };
 		6F3544122D5509C400B83129 /* LivestreamViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6F3544112D5509C400B83129 /* LivestreamViewController.swift */; };
-		6FB758CB2D5545FE00ECB2C6 /* InboxViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6FB758CA2D5545FE00ECB2C6 /* InboxViewController.swift */; };
+		6FB758CB2D5545FE00ECB2C6 /* MessagesViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6FB758CA2D5545FE00ECB2C6 /* MessagesViewController.swift */; };
 		6FB758CE2D55694100ECB2C6 /* NotificationCell.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6FB758CC2D55694100ECB2C6 /* NotificationCell.swift */; };
 		6FB758CF2D55694100ECB2C6 /* FriendRequestCell.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6FB758CD2D55694100ECB2C6 /* FriendRequestCell.swift */; };
 		6FB758D12D55696500ECB2C6 /* Notification.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6FB758D02D55696500ECB2C6 /* Notification.swift */; };
@@ -125,7 +125,7 @@
 		6F35440D2D54C5C800B83129 /* ProfileOptionsViewController.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ProfileOptionsViewController.swift; sourceTree = "<group>"; };
 		6F35440F2D54FF6900B83129 /* PostVideoViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PostVideoViewController.swift; sourceTree = "<group>"; };
 		6F3544112D5509C400B83129 /* LivestreamViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LivestreamViewController.swift; sourceTree = "<group>"; };
-		6FB758CA2D5545FE00ECB2C6 /* InboxViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InboxViewController.swift; sourceTree = "<group>"; };
+		6FB758CA2D5545FE00ECB2C6 /* MessagesViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MessagesViewController.swift; sourceTree = "<group>"; };
 		6FB758CC2D55694100ECB2C6 /* NotificationCell.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = NotificationCell.swift; sourceTree = "<group>"; };
 		6FB758CD2D55694100ECB2C6 /* FriendRequestCell.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = FriendRequestCell.swift; sourceTree = "<group>"; };
 		6FB758D02D55696500ECB2C6 /* Notification.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = Notification.swift; sourceTree = "<group>"; };
@@ -323,7 +323,7 @@
 				6F216C362D53F357000ED151 /* ProfileListsViewController.swift */,
 				6F35440F2D54FF6900B83129 /* PostVideoViewController.swift */,
 				6F3544112D5509C400B83129 /* LivestreamViewController.swift */,
-				6FB758CA2D5545FE00ECB2C6 /* InboxViewController.swift */,
+				6FB758CA2D5545FE00ECB2C6 /* MessagesViewController.swift */,
 			);
 			path = CoreNavigationControllers;
 			sourceTree = "<group>";
@@ -492,7 +492,7 @@
 				6FC69C8A2D52AA1C0020CF09 /* Comment.swift in Sources */,
 				04A12AE02C7993420056120C /* DimmingPresentationController.swift in Sources */,
 				6FB758E02D55828E00ECB2C6 /* NotificationsViewController.swift in Sources */,
-				6FB758CB2D5545FE00ECB2C6 /* InboxViewController.swift in Sources */,
+				6FB758CB2D5545FE00ECB2C6 /* MessagesViewController.swift in Sources */,
 				6FC69C8C2D52C1170020CF09 /* PublicProfileViewController.swift in Sources */,
 				6FB758D62D5575B700ECB2C6 /* UserSearchCell.swift in Sources */,
 				6FB758D12D55696500ECB2C6 /* Notification.swift in Sources */,
