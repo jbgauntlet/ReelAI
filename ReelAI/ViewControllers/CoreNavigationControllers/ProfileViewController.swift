@@ -595,7 +595,7 @@ class ProfileViewController: UIViewController {
                     
                     // Fetch videos and filter out any that don't exist anymore
                     let group = DispatchGroup()
-                    var existingVideos: [Video] = []
+                    var videoDict: [String: Video] = [:] // Store videos in a dictionary by ID
                     
                     for videoId in videoIds {
                         group.enter()
@@ -610,7 +610,7 @@ class ProfileViewController: UIViewController {
                             if let document = snapshot,
                                document.exists,
                                let video = Video(from: document) {
-                                existingVideos.append(video)
+                                videoDict[videoId] = video
                                 print("✅ Successfully fetched video: \(videoId)")
                             } else {
                                 print("⚠️ Video \(videoId) no longer exists")
@@ -626,8 +626,10 @@ class ProfileViewController: UIViewController {
                     }
                     
                     group.notify(queue: .main) {
-                        print("🎬 Finished fetching watch history. Found \(existingVideos.count) existing videos")
-                        self?.videos = existingVideos
+                        print("🎬 Finished fetching watch history. Found \(videoDict.count) existing videos")
+                        // Reconstruct array in original order, filtering out any videos that weren't found
+                        let orderedVideos = videoIds.compactMap { videoDict[$0] }
+                        self?.videos = orderedVideos
                         self?.videoCollectionView.reloadData()
                     }
                 }
@@ -660,7 +662,7 @@ class ProfileViewController: UIViewController {
         print("🎯 Fetching details for \(ids.count) videos")
         let db = Firestore.firestore()
         let group = DispatchGroup()
-        var fetchedVideos: [Video] = []
+        var videoDict: [String: Video] = [:]  // Store videos in dictionary by ID
         
         for id in ids {
             group.enter()
@@ -674,15 +676,17 @@ class ProfileViewController: UIViewController {
                 
                 if let document = snapshot,
                    let video = Video(from: document) {
-                    fetchedVideos.append(video)
+                    videoDict[id] = video  // Store in dictionary instead of array
                     print("✅ Successfully fetched video: \(id)")
                 }
             }
         }
         
         group.notify(queue: .main) { [weak self] in
-            print("🎬 Finished fetching all videos. Found \(fetchedVideos.count) videos")
-            self?.videos = fetchedVideos
+            print("🎬 Finished fetching all videos. Found \(videoDict.count) videos")
+            // Reconstruct array in original order, filtering out any videos that weren't found
+            let orderedVideos = ids.compactMap { videoDict[$0] }
+            self?.videos = orderedVideos
             self?.videoCollectionView.reloadData()
         }
     }
