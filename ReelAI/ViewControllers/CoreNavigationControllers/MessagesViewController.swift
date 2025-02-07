@@ -14,6 +14,7 @@ class MessagesViewController: UIViewController {
     // MARK: - Properties
     private var conversations: [Conversation] = []
     private var conversationsListener: ListenerRegistration?
+    private let transition = HorizontalCoverTransition()
     
     // MARK: - UI Components
     private let titleLabel: UILabel = {
@@ -176,7 +177,9 @@ extension MessagesViewController: UITableViewDelegate, UITableViewDataSource {
         
         let conversation = conversations[indexPath.row]
         let chatVC = ChatViewController(conversation: conversation)
-        navigationController?.pushViewController(chatVC, animated: true)
+        chatVC.modalPresentationStyle = .fullScreen
+        chatVC.transitioningDelegate = self
+        present(chatVC, animated: true)
     }
 }
 
@@ -184,5 +187,18 @@ extension MessagesViewController: UITableViewDelegate, UITableViewDataSource {
 extension MessagesViewController: UISearchBarDelegate {
     func searchBar(_ searchBar: UISearchBar, textDidChange searchText: String) {
         // TODO: Implement search functionality
+    }
+}
+
+// MARK: - UIViewControllerTransitioningDelegate
+extension MessagesViewController: UIViewControllerTransitioningDelegate {
+    func animationController(forPresented presented: UIViewController, presenting: UIViewController, source: UIViewController) -> UIViewControllerAnimatedTransitioning? {
+        transition.isPresenting = true
+        return transition
+    }
+    
+    func animationController(forDismissed dismissed: UIViewController) -> UIViewControllerAnimatedTransitioning? {
+        transition.isPresenting = false
+        return transition
     }
 }
