@@ -12,6 +12,11 @@ import FirebaseStorage
 import AVFoundation
 
 class ProfileVideoThumbnailCell: UICollectionViewCell {
+    // MARK: - Properties
+    private var currentVideoId: String?
+    private var downloadTask: StorageDownloadTask?
+    private var thumbnailGenerationWorkItem: DispatchWorkItem?
+    
     private let thumbnailImageView: UIImageView = {
         let iv = UIImageView()
         iv.contentMode = .scaleAspectFill
@@ -36,6 +41,7 @@ class ProfileVideoThumbnailCell: UICollectionViewCell {
         return layer
     }()
     
+    // MARK: - Lifecycle
     override init(frame: CGRect) {
         super.init(frame: frame)
         setupUI()
@@ -45,6 +51,16 @@ class ProfileVideoThumbnailCell: UICollectionViewCell {
         fatalError("init(coder:) has not been implemented")
     }
     
+    override func prepareForReuse() {
+        super.prepareForReuse()
+        cleanup()
+    }
+    
+    deinit {
+        cleanup()
+    }
+    
+    // MARK: - Setup & Layout
     private func setupUI() {
         contentView.layer.addSublayer(gradientLayer)
         contentView.addSubview(thumbnailImageView)
@@ -66,48 +82,91 @@ class ProfileVideoThumbnailCell: UICollectionViewCell {
         gradientLayer.frame = bounds
     }
     
+    // MARK: - Cleanup
+    private func cleanup() {
+        // Cancel any pending downloads
+        downloadTask?.cancel()
+        downloadTask = nil
+        
+        // Cancel any pending thumbnail generation
+        thumbnailGenerationWorkItem?.cancel()
+        thumbnailGenerationWorkItem = nil
+        
+        // Clear current video ID
+        currentVideoId = nil
+        
+        // Clear the image immediately
+        DispatchQueue.main.async { [weak self] in
+            self?.thumbnailImageView.image = nil
+        }
+    }
+    
+    // MARK: - Configuration
     func configure(with video: Video) {
+        // Clean up any previous state
+        cleanup()
+        
+        // Set current video ID
+        currentVideoId = video.id
+        
+        // Set views count
+        viewsLabel.text = "\(video.viewsCount) views"
+        
         // Get video thumbnail
         let storage = Storage.storage()
         let thumbnailPath = "thumbnails/\(video.id).jpg"
         let thumbnailRef = storage.reference().child(thumbnailPath)
         
         // First try to get thumbnail
-        thumbnailRef.getData(maxSize: 1 * 1024 * 1024) { [weak self] data, error in
+        downloadTask = thumbnailRef.getData(maxSize: 1 * 1024 * 1024) { [weak self] data, error in
+            guard let self = self, self.currentVideoId == video.id else { return }
+            
             if let data = data, let image = UIImage(data: data) {
                 DispatchQueue.main.async {
-                    self?.thumbnailImageView.image = image
+                    // Verify we're still showing the same video
+                    if self.currentVideoId == video.id {
+                        self.thumbnailImageView.image = image
+                    }
                 }
             } else {
                 // If no thumbnail, try to generate one from the video
-                self?.generateThumbnail(from: video.storagePath)
+                self.generateThumbnail(from: video.storagePath, for: video.id)
             }
         }
-        
-        // Set views count
-        viewsLabel.text = "\(video.viewsCount) views"
     }
     
-    private func generateThumbnail(from videoUrl: String) {
+    private func generateThumbnail(from videoUrl: String, for videoId: String) {
         guard let url = URL(string: videoUrl) else { return }
         
         let asset = AVAsset(url: url)
         let imageGenerator = AVAssetImageGenerator(asset: asset)
         imageGenerator.appliesPreferredTrackTransform = true
         
-        // Try to get thumbnail at 0.0 seconds
-        let time = CMTime(seconds: 0.0, preferredTimescale: 600)
-        imageGenerator.generateCGImagesAsynchronously(forTimes: [NSValue(time: time)]) { [weak self] _, cgImage, _, _, _ in
-            if let cgImage = cgImage {
-                let thumbnail = UIImage(cgImage: cgImage)
-                DispatchQueue.main.async {
-                    self?.thumbnailImageView.image = thumbnail
-                }
+        // Create a work item for thumbnail generation
+        let workItem = DispatchWorkItem { [weak self] in
+            guard let self = self, self.currentVideoId == videoId else { return }
+            
+            let time = CMTime(seconds: 0.0, preferredTimescale: 600)
+            imageGenerator.generateCGImagesAsynchronously(forTimes: [NSValue(time: time)]) { [weak self] _, cgImage, _, _, _ in
+                guard let self = self, self.currentVideoId == videoId else { return }
                 
-                // Save thumbnail for future use
-                self?.saveThumbnail(thumbnail, for: videoUrl)
+                if let cgImage = cgImage {
+                    let thumbnail = UIImage(cgImage: cgImage)
+                    DispatchQueue.main.async {
+                        // Final verification before setting the image
+                        if self.currentVideoId == videoId {
+                            self.thumbnailImageView.image = thumbnail
+                            // Save thumbnail for future use
+                            self.saveThumbnail(thumbnail, for: videoUrl)
+                        }
+                    }
+                }
             }
         }
+        
+        // Store the work item and execute it
+        thumbnailGenerationWorkItem = workItem
+        DispatchQueue.global(qos: .userInitiated).async(execute: workItem)
     }
     
     private func saveThumbnail(_ image: UIImage, for videoUrl: String) {
