@@ -215,6 +215,7 @@
 				049397C82C60AB74000603A1 /* Assets */,
 				042273792C5D9D8800A92F9A /* Utils */,
 				042273782C5D9D7B00A92F9A /* Managers */,
+				6FC69C862D52A3360020CF09 /* Views */,
 				042273772C5D9D5B00A92F9A /* ViewControllers */,
 				042273702C5D9C9F00A92F9A /* Models */,
 				042273032C58573D00A92F9A /* Info.plist */,
@@ -239,6 +240,7 @@
 		042273702C5D9C9F00A92F9A /* Models */ = {
 			isa = PBXGroup;
 			children = (
+				6FB758ED2D55C9EC00ECB2C6 /* Cleaned */,
 				6FB758E82D558D4000ECB2C6 /* Conversation.swift */,
 				6FB758E72D558D4000ECB2C6 /* Message.swift */,
 				6FB758D02D55696500ECB2C6 /* Notification.swift */,
@@ -253,9 +255,7 @@
 		042273772C5D9D5B00A92F9A /* ViewControllers */ = {
 			isa = PBXGroup;
 			children = (
-				6FC69C862D52A3360020CF09 /* Views */,
-				04D47C952CA5039600D5DB43 /* Updated */,
-				042273222C58590100A92F9A /* MainTabBarController.swift */,
+				04D47C952CA5039600D5DB43 /* Cleaned */,
 				04FB120C2C70832B00A1C209 /* CoreNavigationControllers */,
 			);
 			path = ViewControllers;
@@ -272,6 +272,7 @@
 		042273792C5D9D8800A92F9A /* Utils */ = {
 			isa = PBXGroup;
 			children = (
+				6FB758EC2D55C9DA00ECB2C6 /* Cleaned */,
 				042273352C58598800A92F9A /* Extensions.swift */,
 				0422737E2C5DA7DA00A92F9A /* PaddedTextField.swift */,
 				04FB121B2C70C65E00A1C209 /* CustomView.swift */,
@@ -293,16 +294,11 @@
 			path = Assets;
 			sourceTree = "<group>";
 		};
-		04D47C952CA5039600D5DB43 /* Updated */ = {
+		04D47C952CA5039600D5DB43 /* Cleaned */ = {
 			isa = PBXGroup;
 			children = (
-				042273332C58595F00A92F9A /* SplashScreenViewController.swift */,
-				04D47C9B2CA538DE00D5DB43 /* SignUpViewController.swift */,
-				04FB12122C70BA4B00A1C209 /* VerifyAccountViewController.swift */,
-				04FB12292C70F13A00A1C209 /* SignInViewController.swift */,
-				04D47C9D2CA53BC500D5DB43 /* AuthenticationModalViewController.swift */,
 			);
-			path = Updated;
+			path = Cleaned;
 			sourceTree = "<group>";
 		};
 		04D47C982CA50E3E00D5DB43 /* Images */ = {
@@ -315,6 +311,12 @@
 		04FB120C2C70832B00A1C209 /* CoreNavigationControllers */ = {
 			isa = PBXGroup;
 			children = (
+				042273222C58590100A92F9A /* MainTabBarController.swift */,
+				042273332C58595F00A92F9A /* SplashScreenViewController.swift */,
+				04D47C9B2CA538DE00D5DB43 /* SignUpViewController.swift */,
+				04FB12122C70BA4B00A1C209 /* VerifyAccountViewController.swift */,
+				04FB12292C70F13A00A1C209 /* SignInViewController.swift */,
+				04D47C9D2CA53BC500D5DB43 /* AuthenticationModalViewController.swift */,
 				6FB758E52D558D2D00ECB2C6 /* ChatViewController.swift */,
 				6FB758DF2D55828E00ECB2C6 /* NotificationsViewController.swift */,
 				6F35440D2D54C5C800B83129 /* ProfileOptionsViewController.swift */,
@@ -341,6 +343,27 @@
 			path = CoreNavigationControllers;
 			sourceTree = "<group>";
 		};
+		6FB758EB2D55C9BB00ECB2C6 /* Cleaned */ = {
+			isa = PBXGroup;
+			children = (
+			);
+			path = Cleaned;
+			sourceTree = "<group>";
+		};
+		6FB758EC2D55C9DA00ECB2C6 /* Cleaned */ = {
+			isa = PBXGroup;
+			children = (
+			);
+			path = Cleaned;
+			sourceTree = "<group>";
+		};
+		6FB758ED2D55C9EC00ECB2C6 /* Cleaned */ = {
+			isa = PBXGroup;
+			children = (
+			);
+			path = Cleaned;
+			sourceTree = "<group>";
+		};
 		6FC41CB52D5146DF003849BC /* Frameworks */ = {
 			isa = PBXGroup;
 			children = (
@@ -351,6 +374,7 @@
 		6FC69C862D52A3360020CF09 /* Views */ = {
 			isa = PBXGroup;
 			children = (
+				6FB758EB2D55C9BB00ECB2C6 /* Cleaned */,
 				6FB758E22D558CBC00ECB2C6 /* ConversationCell.swift */,
 				6FB758E12D558CBC00ECB2C6 /* MessageCell.swift */,
 				6FB758D42D5575B700ECB2C6 /* UserSearchCell.swift */,
@@ -358,7 +382,8 @@
 				6FB758CC2D55694100ECB2C6 /* NotificationCell.swift */,
 				6FC69C8D2D52C84E0020CF09 /* ProfileVideoThumbnailCell.swift */,
 			);
-			path = Views;
+			name = Views;
+			path = Managers/Views;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
