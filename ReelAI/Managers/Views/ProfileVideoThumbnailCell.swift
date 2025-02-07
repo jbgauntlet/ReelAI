@@ -94,11 +94,7 @@ class ProfileVideoThumbnailCell: UICollectionViewCell {
         
         // Clear current video ID
         currentVideoId = nil
-        
-        // Clear the image immediately
-        DispatchQueue.main.async { [weak self] in
-            self?.thumbnailImageView.image = nil
-        }
+        thumbnailImageView.image = nil
     }
     
     // MARK: - Configuration
