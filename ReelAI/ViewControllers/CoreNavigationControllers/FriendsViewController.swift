@@ -8,6 +8,7 @@ class FriendsViewController: UIViewController {
     private var friends: [User] = []
     private var filteredFriends: [User] = []
     private var friendsListener: ListenerRegistration?
+    private let transition = HorizontalCoverTransition()
     
     // MARK: - UI Components
     private let headerLabel: UILabel = {
@@ -197,7 +198,9 @@ class FriendsViewController: UIViewController {
     // MARK: - Actions
     @objc private func handleAddFriend() {
         let addFriendVC = AddFriendViewController()
-        navigationController?.pushViewController(addFriendVC, animated: true)
+        addFriendVC.modalPresentationStyle = .fullScreen
+        addFriendVC.transitioningDelegate = self
+        present(addFriendVC, animated: true)
     }
     
     private func handleUnfriend(_ user: User) {
@@ -306,6 +309,19 @@ extension FriendsViewController: FriendCellDelegate {
         alert.addAction(UIAlertAction(title: "Cancel", style: .cancel))
         
         present(alert, animated: true)
+    }
+}
+
+// MARK: - UIViewControllerTransitioningDelegate
+extension FriendsViewController: UIViewControllerTransitioningDelegate {
+    func animationController(forPresented presented: UIViewController, presenting: UIViewController, source: UIViewController) -> UIViewControllerAnimatedTransitioning? {
+        transition.isPresenting = true
+        return transition
+    }
+    
+    func animationController(forDismissed dismissed: UIViewController) -> UIViewControllerAnimatedTransitioning? {
+        transition.isPresenting = false
+        return transition
     }
 }
 

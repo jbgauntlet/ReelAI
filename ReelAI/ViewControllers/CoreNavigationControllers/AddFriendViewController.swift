@@ -247,7 +247,7 @@ class AddFriendViewController: UIViewController {
     
     // MARK: - Actions
     @objc private func handleBack() {
-        navigationController?.popViewController(animated: true)
+        dismiss(animated: true)
     }
 }
 
