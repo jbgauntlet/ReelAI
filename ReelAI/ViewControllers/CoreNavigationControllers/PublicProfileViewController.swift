@@ -48,6 +48,17 @@ class PublicProfileViewController: UIViewController {
         return button
     }()
     
+    private let messageButton: UIButton = {
+        let button = UIButton(type: .system)
+        button.backgroundColor = .systemGray6
+        button.setTitle("Message", for: .normal)
+        button.setTitleColor(.black, for: .normal)
+        button.titleLabel?.font = .systemFont(ofSize: 16, weight: .semibold)
+        button.layer.cornerRadius = 20
+        button.translatesAutoresizingMaskIntoConstraints = false
+        return button
+    }()
+    
     // MARK: - UI Components
     private let headerView: UIView = {
         let view = UIView()
@@ -186,6 +197,7 @@ class PublicProfileViewController: UIViewController {
             statsStackView.addArrangedSubview(statView)
         }
         
+        actionsStackView.addArrangedSubview(messageButton)
         actionsStackView.addArrangedSubview(followButton)
         actionsStackView.addArrangedSubview(friendButton)
         
@@ -247,6 +259,7 @@ class PublicProfileViewController: UIViewController {
         
         followButton.addTarget(self, action: #selector(handleFollowTap), for: .touchUpInside)
         friendButton.addTarget(self, action: #selector(handleFriendTap), for: .touchUpInside)
+        messageButton.addTarget(self, action: #selector(handleMessageTap), for: .touchUpInside)
         backButton.addTarget(self, action: #selector(handleBack), for: .touchUpInside)
         
         // Check initial friendship status
@@ -734,6 +747,59 @@ class PublicProfileViewController: UIViewController {
                 self?.isFriend = false
             }
         }
+    }
+    
+    @objc private func handleMessageTap() {
+        guard let currentUserId = Auth.auth().currentUser?.uid,
+              let otherUserId = userId else { return }
+        
+        let db = Firestore.firestore()
+        
+        // Check if a conversation already exists
+        db.collection("conversations")
+            .whereField("participants", arrayContains: currentUserId)
+            .getDocuments { [weak self] snapshot, error in
+                guard let self = self else { return }
+                
+                if let error = error {
+                    print("Error checking existing conversations: \(error)")
+                    return
+                }
+                
+                // Look for an existing conversation with these participants
+                if let existingConversation = snapshot?.documents.first(where: { document in
+                    let participants = document.data()["participants"] as? [String] ?? []
+                    return participants.contains(otherUserId)
+                }) {
+                    // Open existing conversation
+                    if let conversation = Conversation(from: existingConversation) {
+                        let chatVC = ChatViewController(conversation: conversation)
+                        self.navigationController?.pushViewController(chatVC, animated: true)
+                    }
+                } else {
+                    // Create a new conversation
+                    let conversationData: [String: Any] = [
+                        "participants": [currentUserId, otherUserId],
+                        "created_at": FieldValue.serverTimestamp(),
+                        "last_message": "",
+                        "last_message_timestamp": FieldValue.serverTimestamp()
+                    ]
+                    
+                    db.collection("conversations").addDocument(data: conversationData) { [weak self] error in
+                        if let error = error {
+                            print("Error creating conversation: \(error)")
+                            return
+                        }
+                        
+                        // Fetch the newly created conversation and open chat
+                        if let document = snapshot?.documents.first,
+                           let conversation = Conversation(from: document) {
+                            let chatVC = ChatViewController(conversation: conversation)
+                            self?.navigationController?.pushViewController(chatVC, animated: true)
+                        }
+                    }
+                }
+            }
     }
     
     @objc private func handleBack() {
