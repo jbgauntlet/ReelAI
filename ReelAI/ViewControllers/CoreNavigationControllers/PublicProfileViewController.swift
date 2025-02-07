@@ -829,9 +829,79 @@ extension PublicProfileViewController: UICollectionViewDataSource, UICollectionV
     }
     
     func collectionView(_ collectionView: UICollectionView, didSelectItemAt indexPath: IndexPath) {
-        let videoScrollFeedVC = VideoScrollFeedViewController(videos: userVideos, startingIndex: indexPath.item)
-        videoScrollFeedVC.modalPresentationStyle = .fullScreen
-        present(videoScrollFeedVC, animated: true)
+        // First enrich the videos with complete metadata
+        let group = DispatchGroup()
+        let db = Firestore.firestore()
+        let currentUserId = Auth.auth().currentUser?.uid
+        
+        // Create a mutable copy of videos to update
+        var enrichedVideos = userVideos
+        
+        // Fetch creator info for all videos
+        let creatorIds = Set(userVideos.map { $0.creatorId })
+        
+        for creatorId in creatorIds {
+            if VideosCache.shared.getCreatorInfo(userId: creatorId) != nil { continue }
+            
+            group.enter()
+            db.collection("users").document(creatorId).getDocument { snapshot, error in
+                defer { group.leave() }
+                
+                if let data = snapshot?.data(),
+                   let username = data["username"] as? String {
+                    let avatarURL = data["avatar"] as? String
+                    VideosCache.shared.cacheCreatorInfo(userId: creatorId, username: username, avatarURL: avatarURL)
+                }
+            }
+        }
+        
+        // Fetch interaction states if user is logged in
+        if let currentUserId = currentUserId {
+            for (index, video) in userVideos.enumerated() {
+                group.enter()
+                let likeRef = db.collection("video_likes").document("\(video.id)_\(currentUserId)")
+                let bookmarkRef = db.collection("video_bookmarks").document("\(video.id)_\(currentUserId)")
+                
+                let interactionGroup = DispatchGroup()
+                var isLiked = false
+                var isBookmarked = false
+                
+                interactionGroup.enter()
+                likeRef.getDocument { snapshot, _ in
+                    isLiked = snapshot?.exists == true
+                    interactionGroup.leave()
+                }
+                
+                interactionGroup.enter()
+                bookmarkRef.getDocument { snapshot, _ in
+                    isBookmarked = snapshot?.exists == true
+                    interactionGroup.leave()
+                }
+                
+                interactionGroup.notify(queue: .main) {
+                    if let creatorInfo = VideosCache.shared.getCreatorInfo(userId: video.creatorId) {
+                        let metadata = VideoMetadata(
+                            creatorUsername: creatorInfo.username,
+                            creatorAvatarURL: creatorInfo.avatarURL,
+                            likesCount: video.likesCount,
+                            bookmarksCount: video.bookmarksCount,
+                            commentsCount: video.commentsCount,
+                            isLikedByCurrentUser: isLiked,
+                            isBookmarkedByCurrentUser: isBookmarked
+                        )
+                        enrichedVideos[index].updateMetadata(metadata)
+                    }
+                    group.leave()
+                }
+            }
+        }
+        
+        // Present feed with enriched videos
+        group.notify(queue: .main) {
+            let videoScrollFeedVC = VideoScrollFeedViewController(videos: enrichedVideos, startingIndex: indexPath.item)
+            videoScrollFeedVC.modalPresentationStyle = .fullScreen
+            self.present(videoScrollFeedVC, animated: true)
+        }
     }
 }
 
