@@ -267,7 +267,8 @@ extension FriendsViewController: UICollectionViewDataSource, UICollectionViewDel
         let friend = filteredFriends[indexPath.item]
         let profileVC = PublicProfileViewController()
         profileVC.userId = friend.uid
-        navigationController?.pushViewController(profileVC, animated: true)
+        profileVC.modalPresentationStyle = .fullScreen
+        present(profileVC, animated: true)
     }
     
     func collectionView(_ collectionView: UICollectionView, layout collectionViewLayout: UICollectionViewLayout, sizeForItemAt indexPath: IndexPath) -> CGSize {
@@ -299,7 +300,8 @@ extension FriendsViewController: FriendCellDelegate {
         alert.addAction(UIAlertAction(title: "View Profile", style: .default) { [weak self] _ in
             let profileVC = PublicProfileViewController()
             profileVC.userId = user.uid
-            self?.navigationController?.pushViewController(profileVC, animated: true)
+            profileVC.modalPresentationStyle = .fullScreen
+            self?.present(profileVC, animated: true)
         })
         
         alert.addAction(UIAlertAction(title: "Remove Friend", style: .destructive) { [weak self] _ in
