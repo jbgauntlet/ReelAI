@@ -1263,6 +1263,10 @@ class VideoScrollContentViewController: UIViewController, UICollectionViewDelega
                 existingCell.restart()  // Use restart for initial playback
                 currentlyPlayingCell = existingCell
                 
+                // Track video view when cell becomes visible and starts playing
+                print("📊 About to track video view for newly visible cell")
+                trackVideoView(video)
+                
                 // Prefetch adjacent videos
                 prefetchAdjacentVideos(for: indexPath.item)
             }
@@ -1320,6 +1324,10 @@ class VideoScrollContentViewController: UIViewController, UICollectionViewDelega
             currentlyPlayingCell?.pause()
             cell.restart()  // Use restart when switching to a new video
             currentlyPlayingCell = cell
+            
+            // Track video view when user scrolls to a new video
+            print("📊 About to track video view after scroll")
+            trackVideoView(videos[indexPath.item])
             
             // Update loading window and perform cleanup
             updateLoadingWindow()
@@ -1464,6 +1472,75 @@ class VideoScrollContentViewController: UIViewController, UICollectionViewDelega
         memoryUsageLogger?.invalidate()
         memoryUsageLogger = nil
     }
+    
+    private func trackVideoView(_ video: Video) {
+        guard let currentUserId = Auth.auth().currentUser?.uid else {
+            print("❌ Cannot track video view: No current user")
+            return
+        }
+        
+        print("\n📊 Starting to track view for video: \(video.id)")
+        print("👤 Current user: \(currentUserId)")
+        
+        let db = Firestore.firestore()
+        let videoRef = db.collection("videos").document(video.id)
+        let viewRef = db.collection("video_views").document("\(video.id)_\(currentUserId)")
+        
+        print("🔍 Checking for existing view record at path: video_views/\(video.id)_\(currentUserId)")
+        
+        // First check if we have an existing view record
+        viewRef.getDocument { [weak self] snapshot, error in
+            if let error = error {
+                print("❌ Error checking view history: \(error.localizedDescription)")
+                return
+            }
+            
+            print("📝 View record exists: \(snapshot?.exists == true)")
+            
+            let batch = db.batch()
+            print("🔄 Creating batch operation")
+            
+            // Always increment the views_count on the video document
+            print("➕ Adding views_count increment to batch")
+            batch.setData([
+                "views_count": FieldValue.increment(Int64(1))
+            ], forDocument: videoRef, merge: true)
+            
+            let now = FieldValue.serverTimestamp()
+            
+            if snapshot?.exists != true {
+                print("📌 First view - creating new view record")
+                // First time view - create the view record
+                batch.setData([
+                    "video_id": video.id,
+                    "user_id": currentUserId,
+                    "first_viewed": now,
+                    "last_viewed": now,
+                    "created_at": now
+                ], forDocument: viewRef)
+            } else {
+                print("🔄 Existing view - updating last_viewed timestamp")
+                // Just update the last_viewed timestamp
+                batch.updateData([
+                    "last_viewed": now
+                ], forDocument: viewRef)
+            }
+            
+            print("💾 Committing batch operation")
+            // Commit the batch
+            batch.commit { error in
+                if let error = error {
+                    print("❌ Error tracking video view: \(error.localizedDescription)")
+                    print("Error details: \(error)")
+                } else {
+                    print("✅ Successfully tracked video view")
+                    print("   - Video: \(video.id)")
+                    print("   - User: \(currentUserId)")
+                    print("   - Operation: \(snapshot?.exists == true ? "Updated existing record" : "Created new record")")
+                }
+            }
+        }
+    }
 }
 
 // MARK: - Helper Extensions
@@ -1508,29 +1585,39 @@ extension VideoScrollContentViewController: FullScreenVideoCellDelegate {
             
             // Update Firebase in background
             let db = Firestore.firestore()
+            let batch = db.batch()
             let likeRef = db.collection("video_likes").document("\(video.id)_\(currentUserId)")
+            let videoRef = db.collection("videos").document(video.id)
             
             if newLikeState {
-                likeRef.setData([
+                // Add like document
+                batch.setData([
                     "video_id": video.id,
                     "user_id": currentUserId,
                     "created_at": FieldValue.serverTimestamp()
-                ]) { [weak self] error in
-                    if let error = error {
-                        // Revert on error
-                        print("❌ Error liking video: \(error.localizedDescription)")
-                        video.updateLikeStatus(isLiked: isCurrentlyLiked)
-                        visibleCell.updateUI(with: video)
-                    }
-                }
+                ], forDocument: likeRef)
+                
+                // Increment video likes count
+                batch.updateData([
+                    "likes_count": FieldValue.increment(Int64(1))
+                ], forDocument: videoRef)
             } else {
-                likeRef.delete { [weak self] error in
-                    if let error = error {
-                        // Revert on error
-                        print("❌ Error unliking video: \(error.localizedDescription)")
-                        video.updateLikeStatus(isLiked: isCurrentlyLiked)
-                        visibleCell.updateUI(with: video)
-                    }
+                // Delete like document
+                batch.deleteDocument(likeRef)
+                
+                // Decrement video likes count
+                batch.updateData([
+                    "likes_count": FieldValue.increment(Int64(-1))
+                ], forDocument: videoRef)
+            }
+            
+            // Commit the batch
+            batch.commit { [weak self] error in
+                if let error = error {
+                    // Revert on error
+                    print("❌ Error updating like status: \(error.localizedDescription)")
+                    video.updateLikeStatus(isLiked: isCurrentlyLiked)
+                    visibleCell.updateUI(with: video)
                 }
             }
         }
@@ -1590,29 +1677,39 @@ extension VideoScrollContentViewController: FullScreenVideoCellDelegate {
             
             // Update Firebase in background
             let db = Firestore.firestore()
+            let batch = db.batch()
             let bookmarkRef = db.collection("video_bookmarks").document("\(video.id)_\(currentUserId)")
+            let videoRef = db.collection("videos").document(video.id)
             
             if newBookmarkState {
-                bookmarkRef.setData([
+                // Add bookmark document
+                batch.setData([
                     "video_id": video.id,
                     "user_id": currentUserId,
                     "created_at": FieldValue.serverTimestamp()
-                ]) { [weak self] error in
-                    if let error = error {
-                        // Revert on error
-                        print("❌ Error bookmarking video: \(error.localizedDescription)")
-                        video.updateBookmarkStatus(isBookmarked: isCurrentlyBookmarked)
-                        visibleCell.updateUI(with: video)
-                    }
-                }
+                ], forDocument: bookmarkRef)
+                
+                // Increment video bookmarks count
+                batch.updateData([
+                    "bookmarks_count": FieldValue.increment(Int64(1))
+                ], forDocument: videoRef)
             } else {
-                bookmarkRef.delete { [weak self] error in
-                    if let error = error {
-                        // Revert on error
-                        print("❌ Error unbookmarking video: \(error.localizedDescription)")
-                        video.updateBookmarkStatus(isBookmarked: isCurrentlyBookmarked)
-                        visibleCell.updateUI(with: video)
-                    }
+                // Delete bookmark document
+                batch.deleteDocument(bookmarkRef)
+                
+                // Decrement video bookmarks count
+                batch.updateData([
+                    "bookmarks_count": FieldValue.increment(Int64(-1))
+                ], forDocument: videoRef)
+            }
+            
+            // Commit the batch
+            batch.commit { [weak self] error in
+                if let error = error {
+                    // Revert on error
+                    print("❌ Error updating bookmark status: \(error.localizedDescription)")
+                    video.updateBookmarkStatus(isBookmarked: isCurrentlyBookmarked)
+                    visibleCell.updateUI(with: video)
                 }
             }
         }
