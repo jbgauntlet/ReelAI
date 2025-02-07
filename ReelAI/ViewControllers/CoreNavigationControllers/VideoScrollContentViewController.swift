@@ -1325,10 +1325,6 @@ class VideoScrollContentViewController: UIViewController, UICollectionViewDelega
             cell.restart()  // Use restart when switching to a new video
             currentlyPlayingCell = cell
             
-            // Track video view when user scrolls to a new video
-            print("📊 About to track video view after scroll")
-            trackVideoView(videos[indexPath.item])
-            
             // Update loading window and perform cleanup
             updateLoadingWindow()
         }
