@@ -4,7 +4,12 @@ import FirebaseFirestore
 import FirebaseStorage
 import FirebaseAuth
 
-// Video Cache Manager
+// MARK: - Video Cache Manager
+/**
+ * VideoCache is a singleton class responsible for managing video asset caching.
+ * It provides both memory and disk caching capabilities for AVURLAssets to improve
+ * video loading performance and reduce network usage.
+ */
 class VideoCache {
     static let shared = VideoCache()
     private let cache = NSCache<NSString, AVURLAsset>()  // Cache AVURLAsset instead of AVPlayerItem
@@ -12,53 +17,41 @@ class VideoCache {
     private let cacheDirectory: URL
     private let maxCacheSize: Int = 500 * 1024 * 1024  // 500MB
     
+    /// Private initializer for singleton pattern
     private init() {
+        // Set up cache directory in user's domain
         cacheDirectory = fileManager.urls(for: .cachesDirectory, in: .userDomainMask)[0]
             .appendingPathComponent("VideoCache")
         
+        // Create cache directory if it doesn't exist
         try? fileManager.createDirectory(at: cacheDirectory, 
                                       withIntermediateDirectories: true)
         
-        cache.countLimit = 3
-        cache.totalCostLimit = 250 * 1024 * 1024
+        // Configure cache limits
+        cache.countLimit = 3  // Maximum number of items in memory cache
+        cache.totalCostLimit = 250 * 1024 * 1024  // 250MB memory cache limit
         
+        // Clean up old cache files on initialization
         cleanOldCacheFiles()
     }
     
-    func playerItem(for url: URL) -> AVPlayerItem {
-        let cacheKey = NSString(string: url.absoluteString)
-        
-        // Get or create asset
-        let asset: AVURLAsset
-        if let cachedAsset = cache.object(forKey: cacheKey) {
-            print("📦 Found video asset in memory cache")
-            asset = cachedAsset
-        } else {
-            print("🔄 Creating new video asset")
-            asset = AVURLAsset(url: url, options: [
-                "AVURLAssetOutOfBandMIMETypeKey": "video/mp4",
-                "AVURLAssetHTTPHeaderFieldsKey": ["Accept": "video/mp4"]
-            ])
-            cache.setObject(asset, forKey: cacheKey)
-        }
-        
-        // Always create a new player item
-        return AVPlayerItem(asset: asset)
-    }
+
     
+    /// Cleans up old cache files to maintain size limit
     func cleanOldCacheFiles() {
         do {
+            // Get all files in cache directory with their properties
             let files = try fileManager.contentsOfDirectory(at: cacheDirectory, 
                                                           includingPropertiesForKeys: [.creationDateKey, .fileSizeKey])
             
-            // Sort by creation date
+            // Sort files by creation date (oldest first)
             let sortedFiles = files.sorted { file1, file2 in
                 let date1 = try? file1.resourceValues(forKeys: [.creationDateKey]).creationDate ?? Date.distantPast
                 let date2 = try? file2.resourceValues(forKeys: [.creationDateKey]).creationDate ?? Date.distantPast
                 return date1! < date2!
             }
             
-            // Calculate total size
+            // Calculate total size and remove old files if exceeding limit
             var totalSize: Int64 = 0
             for file in sortedFiles {
                 let size = try file.resourceValues(forKeys: [.fileSizeKey]).fileSize ?? 0
@@ -75,6 +68,7 @@ class VideoCache {
         }
     }
     
+    /// Clears all cached assets from memory and disk
     func clearCache() {
         cache.removeAllObjects()
         try? fileManager.removeItem(at: cacheDirectory)
@@ -82,15 +76,55 @@ class VideoCache {
                                       withIntermediateDirectories: true)
     }
     
+    /// Returns an AVPlayerItem for the given URL, using cached asset if available
+    /// - Parameter url: The URL of the video
+    /// - Returns: An AVPlayerItem configured with the video asset
+    func playerItem(for url: URL) -> AVPlayerItem {
+        let cacheKey = NSString(string: url.absoluteString)
+        
+        // Get or create asset
+        let asset: AVURLAsset
+        if let cachedAsset = cache.object(forKey: cacheKey) {
+            print("📦 Found video asset in memory cache")
+            asset = cachedAsset
+        } else {
+            print("🔄 Creating new video asset")
+            // Create new asset with optimized loading options
+            asset = AVURLAsset(url: url, options: [
+                "AVURLAssetOutOfBandMIMETypeKey": "video/mp4",
+                "AVURLAssetHTTPHeaderFieldsKey": ["Accept": "video/mp4"]
+            ])
+            cache.setObject(asset, forKey: cacheKey)
+        }
+        
+        // Create new player item from asset
+        return AVPlayerItem(asset: asset)
+    }
+    
+    /// Caches an asset in memory for quick access
+    /// - Parameters:
+    ///   - asset: The AVURLAsset to cache
+    ///   - key: The key to store the asset under
     func cacheAsset(_ asset: AVURLAsset, forKey key: String) {
         cache.setObject(asset, forKey: NSString(string: key))
     }
 }
 
+// MARK: - FullScreenVideoCell
+/**
+ * FullScreenVideoCell is a custom UICollectionViewCell that displays a full-screen video
+ * with playback controls and interactive elements like likes, comments, and bookmarks.
+ */
 class FullScreenVideoCell: UICollectionViewCell {
+    // Cell identifier for registration and dequeuing
     static let identifier = "FullScreenVideoCell"
-    private var cellId = UUID().uuidString // For logging purposes
     
+    // Unique identifier for logging and debugging
+    private var cellId = UUID().uuidString
+    
+    // MARK: - UI Components
+    
+    /// Main view for displaying video content
     private let playerView: UIView = {
         let view = UIView()
         view.backgroundColor = .black
@@ -98,6 +132,7 @@ class FullScreenVideoCell: UICollectionViewCell {
         return view
     }()
     
+    /// Activity indicator shown during video loading
     private let loadingIndicator: UIActivityIndicatorView = {
         let indicator = UIActivityIndicatorView(style: .large)
         indicator.color = .white
@@ -106,6 +141,8 @@ class FullScreenVideoCell: UICollectionViewCell {
     }()
     
     // MARK: - Action Bar UI Components
+    
+    /// Container view for action buttons (like, comment, share)
     private let actionBarView: UIView = {
         let view = UIView()
         view.backgroundColor = .clear
@@ -113,6 +150,7 @@ class FullScreenVideoCell: UICollectionViewCell {
         return view
     }()
     
+    /// Button displaying creator's avatar/profile picture
     private let creatorAvatarButton: UIButton = {
         let button = UIButton(type: .system)
         button.backgroundColor = .clear
@@ -124,6 +162,7 @@ class FullScreenVideoCell: UICollectionViewCell {
         return button
     }()
     
+    /// Button for liking/unliking the video
     private let likeButton: UIButton = {
         let button = UIButton(type: .system)
         let config = UIImage.SymbolConfiguration(pointSize: 30, weight: .medium)
@@ -230,6 +269,9 @@ class FullScreenVideoCell: UICollectionViewCell {
     weak var delegate: FullScreenVideoCellDelegate?
     var currentVideo: Video?
     
+    // MARK: - Setup Methods
+    
+    /// Initializes and sets up the cell's UI components
     override init(frame: CGRect) {
         super.init(frame: frame)
         print("📱 VideoCell initialized with ID: \(cellId)")
@@ -241,15 +283,18 @@ class FullScreenVideoCell: UICollectionViewCell {
         fatalError("init(coder:) has not been implemented")
     }
     
+    /// Sets up the main UI components and constraints
     private func setupUI() {
-        // Make sure the cell's content view fills the cell
+        // Configure content view to fill the cell
         contentView.frame = bounds
         contentView.autoresizingMask = [.flexibleWidth, .flexibleHeight]
         
+        // Add and configure main components
         contentView.addSubview(playerView)
         contentView.addSubview(loadingIndicator)
         setupInfoPanel()
         
+        // Set up constraints
         NSLayoutConstraint.activate([
             playerView.topAnchor.constraint(equalTo: contentView.topAnchor),
             playerView.leadingAnchor.constraint(equalTo: contentView.leadingAnchor),
@@ -261,13 +306,16 @@ class FullScreenVideoCell: UICollectionViewCell {
         ])
     }
     
+    /// Sets up the info panel containing video title, caption, and tags
     private func setupInfoPanel() {
         contentView.addSubview(infoPanelView)
         
+        // Add info panel components
         infoPanelView.addSubview(titleLabel)
         infoPanelView.addSubview(captionLabel)
         infoPanelView.addSubview(tagsLabel)
         
+        // Configure info panel constraints
         NSLayoutConstraint.activate([
             infoPanelView.leadingAnchor.constraint(equalTo: contentView.leadingAnchor, constant: 16),
             infoPanelView.bottomAnchor.constraint(equalTo: contentView.bottomAnchor, constant: -8),
@@ -288,19 +336,23 @@ class FullScreenVideoCell: UICollectionViewCell {
         ])
     }
     
+    /// Sets up the action bar containing interaction buttons
     private func setupActionBar() {
         contentView.addSubview(actionBarView)
         
+        // Add action buttons
         actionBarView.addSubview(creatorAvatarButton)
         actionBarView.addSubview(likeButton)
         actionBarView.addSubview(commentButton)
         actionBarView.addSubview(bookmarkButton)
         actionBarView.addSubview(shareButton)
         
+        // Add count labels
         actionBarView.addSubview(likeCountLabel)
         actionBarView.addSubview(commentCountLabel)
         actionBarView.addSubview(bookmarkCountLabel)
         
+        // Configure action bar constraints
         NSLayoutConstraint.activate([
             actionBarView.trailingAnchor.constraint(equalTo: contentView.trailingAnchor, constant: -8),
             actionBarView.bottomAnchor.constraint(equalTo: contentView.bottomAnchor, constant: -8),
@@ -334,7 +386,7 @@ class FullScreenVideoCell: UICollectionViewCell {
             shareButton.centerXAnchor.constraint(equalTo: actionBarView.centerXAnchor)
         ])
         
-        // Add targets for buttons
+        // Configure button actions
         creatorAvatarButton.addTarget(self, action: #selector(creatorAvatarTapped), for: .touchUpInside)
         likeButton.addTarget(self, action: #selector(likeTapped), for: .touchUpInside)
         commentButton.addTarget(self, action: #selector(commentTapped), for: .touchUpInside)
@@ -342,20 +394,24 @@ class FullScreenVideoCell: UICollectionViewCell {
         shareButton.addTarget(self, action: #selector(shareTapped), for: .touchUpInside)
     }
     
+    // MARK: - Video Configuration Methods
+    
+    /// Configures the cell with a video model
+    /// - Parameter video: The video model to display
     func configure(with video: Video) {
         currentVideo = video
         
-        // Configure video player
+        // Configure video player if URL is valid
         guard let videoURL = URL(string: video.storagePath) else { return }
         configureVideo(with: videoURL)
         
-        // Update action bar
+        // Update UI components
         updateActionBar(with: video)
         
-        // Update info panel
+        // Update info panel content
         titleLabel.text = video.title
         captionLabel.text = video.caption
-        // Safely handle tags
+        // Format and display tags if available
         if let tags = video.tags {
             tagsLabel.text = tags.map { "#\($0)" }.joined(separator: " ")
         } else {
@@ -363,6 +419,9 @@ class FullScreenVideoCell: UICollectionViewCell {
         }
     }
     
+    /// Formats a number for display (e.g., 1000 -> 1K)
+    /// - Parameter count: The number to format
+    /// - Returns: Formatted string representation
     private func formatCount(_ count: Int) -> String {
         switch count {
         case 0..<1000:
@@ -376,22 +435,20 @@ class FullScreenVideoCell: UICollectionViewCell {
         }
     }
     
+    /// Updates the action bar UI components with video data
+    /// - Parameter video: The video model containing the data
     private func updateActionBar(with video: Video) {
-        // Update like button state and count
+        // Fetch and update interaction states and counts
         fetchLikeStatus(for: video)
         fetchLikesCount(for: video)
-        
-        // Update comment count
         fetchCommentsCount(for: video)
-        
-        // Update bookmark button state and count
         fetchBookmarkStatus(for: video)
         fetchBookmarksCount(for: video)
-        
-        // Update creator avatar
         fetchCreatorAvatar(for: video)
     }
     
+    /// Configures the video player with the provided URL
+    /// - Parameter url: The URL of the video to play
     private func configureVideo(with url: URL) {
         print("🎬 Configuring cell \(cellId) with video URL: \(url.lastPathComponent)")
         loadingIndicator.startAnimating()
@@ -399,25 +456,25 @@ class FullScreenVideoCell: UICollectionViewCell {
         // Get cached player item
         let playerItem = VideoCache.shared.playerItem(for: url)
         
-        // Create player with the cached item
+        // Create and configure player
         let player = AVPlayer(playerItem: playerItem)
         player.automaticallyWaitsToMinimizeStalling = false
         self.player = player
         
-        // Create player layer and set frame immediately
+        // Configure player layer
         let playerLayer = AVPlayerLayer(player: player)
         playerLayer.videoGravity = .resizeAspectFill
         playerLayer.frame = playerView.bounds
         self.playerLayer = playerLayer
         
-        // Remove any existing player layers
+        // Update layer hierarchy
         playerView.layer.sublayers?.forEach { $0.removeFromSuperlayer() }
         playerView.layer.addSublayer(playerLayer)
         
-        // Ensure frame is set correctly before proceeding
+        // Ensure proper layout
         layoutIfNeeded()
         
-        // Add observers
+        // Add observers for playback events
         NotificationCenter.default.addObserver(self,
                                              selector: #selector(playerItemDidReachEnd),
                                              name: .AVPlayerItemDidPlayToEndTime,
@@ -440,10 +497,13 @@ class FullScreenVideoCell: UICollectionViewCell {
         print("🎥 Player setup complete for cell \(cellId)")
     }
     
+    // MARK: - Lifecycle Methods
+    
+    /// Updates layout when cell bounds change
     override func layoutSubviews() {
         super.layoutSubviews()
         
-        // Only update frames if they've actually changed
+        // Update frames only if they've changed
         if contentView.frame != bounds {
             contentView.frame = bounds
         }
@@ -458,6 +518,7 @@ class FullScreenVideoCell: UICollectionViewCell {
         }
     }
     
+    /// Handles player status changes
     override func observeValue(forKeyPath keyPath: String?,
                              of object: Any?,
                              change: [NSKeyValueChangeKey : Any]?,
@@ -477,44 +538,57 @@ class FullScreenVideoCell: UICollectionViewCell {
         }
     }
     
+    /// Handles video playback completion
     @objc private func playerItemDidReachEnd() {
         print("🔄 Video reached end in cell \(cellId), looping...")
         player?.seek(to: .zero)
         player?.play()
     }
     
+    /// Starts video playback
     func play() {
         print("▶️ Playing video in cell \(cellId)")
         player?.seek(to: .zero)
         player?.play()
     }
     
+    /// Pauses video playback
     func pause() {
         print("⏸️ Pausing video in cell \(cellId)")
         player?.pause()
     }
     
+    /// Prepares the cell for reuse
     override func prepareForReuse() {
         super.prepareForReuse()
         print("♻️ Preparing cell \(cellId) for reuse")
+        
+        // Clean up video playback resources
         player?.pause()
         player?.replaceCurrentItem(with: nil)
         player = nil
         playerLayer?.removeFromSuperlayer()
         playerLayer = nil
+        
+        // Remove observers
         NotificationCenter.default.removeObserver(self)
         
         // Clear current video
         currentVideo = nil
         
-        // Remove avatar label if it exists
+        // Clean up UI
         creatorAvatarButton.subviews.forEach { $0.removeFromSuperview() }
     }
     
+    /// Cleanup when cell is deallocated
     deinit {
         print("🗑️ VideoCell \(cellId) being deallocated")
     }
     
+    // MARK: - Firebase Interaction Methods
+    
+    /// Fetches and updates the like status for a video
+    /// - Parameter video: The video to check like status for
     private func fetchLikeStatus(for video: Video) {
         guard let currentUserId = Auth.auth().currentUser?.uid else { return }
         
@@ -524,7 +598,7 @@ class FullScreenVideoCell: UICollectionViewCell {
         likeRef.getDocument { [weak self] snapshot, error in
             guard let self = self else { return }
             
-            // Animate like button appearance based on whether the user has liked
+            // Update like button appearance based on like status
             if snapshot?.exists == true {
                 self.animateLikeButton(isLiked: true)
             } else {
@@ -533,12 +607,14 @@ class FullScreenVideoCell: UICollectionViewCell {
         }
     }
     
+    /// Animates the like button state change
+    /// - Parameter isLiked: Whether the video is liked
     func animateLikeButton(isLiked: Bool) {
-        // First, scale down quickly
+        // Scale down animation
         UIView.animate(withDuration: 0.15, animations: {
             self.likeButton.transform = CGAffineTransform(scaleX: 0.8, y: 0.8)
         }) { _ in
-            // Then, scale up and change color
+            // Scale up and color change animation
             UIView.animate(withDuration: 0.25, delay: 0, usingSpringWithDamping: 0.5, initialSpringVelocity: 0.5, options: .curveEaseInOut) {
                 self.likeButton.transform = CGAffineTransform.identity
                 self.likeButton.tintColor = isLiked ? .systemRed : .white
@@ -546,6 +622,8 @@ class FullScreenVideoCell: UICollectionViewCell {
         }
     }
     
+    /// Fetches and updates the likes count for a video
+    /// - Parameter video: The video to fetch likes count for
     func fetchLikesCount(for video: Video) {
         let db = Firestore.firestore()
         db.collection("video_likes")
@@ -558,10 +636,11 @@ class FullScreenVideoCell: UICollectionViewCell {
                     return
                 }
                 
+                // Update UI with likes count
                 let likesCount = snapshot?.documents.count ?? 0
                 self.likeCountLabel.text = "\(likesCount)"
                 
-                // Update the video document with the current count if it's different
+                // Update video document if count has changed
                 if likesCount != video.likesCount {
                     db.collection("videos").document(video.id).updateData([
                         "likes_count": likesCount
@@ -570,6 +649,8 @@ class FullScreenVideoCell: UICollectionViewCell {
             }
     }
     
+    /// Fetches and updates the bookmark status for a video
+    /// - Parameter video: The video to check bookmark status for
     func fetchBookmarkStatus(for video: Video) {
         guard let currentUserId = Auth.auth().currentUser?.uid else { return }
         
@@ -579,7 +660,7 @@ class FullScreenVideoCell: UICollectionViewCell {
         bookmarkRef.getDocument { [weak self] snapshot, error in
             guard let self = self else { return }
             
-            // Animate bookmark button appearance based on whether the user has bookmarked
+            // Update bookmark button appearance based on bookmark status
             if snapshot?.exists == true {
                 self.animateBookmarkButton(isBookmarked: true)
             } else {
@@ -588,12 +669,14 @@ class FullScreenVideoCell: UICollectionViewCell {
         }
     }
     
+    /// Animates the bookmark button state change
+    /// - Parameter isBookmarked: Whether the video is bookmarked
     func animateBookmarkButton(isBookmarked: Bool) {
-        // First, scale down quickly
+        // Scale down animation
         UIView.animate(withDuration: 0.15, animations: {
             self.bookmarkButton.transform = CGAffineTransform(scaleX: 0.8, y: 0.8)
         }) { _ in
-            // Then, scale up and change color
+            // Scale up and color change animation
             UIView.animate(withDuration: 0.25, delay: 0, usingSpringWithDamping: 0.5, initialSpringVelocity: 0.5, options: .curveEaseInOut) {
                 self.bookmarkButton.transform = CGAffineTransform.identity
                 self.bookmarkButton.tintColor = isBookmarked ? .systemYellow : .white
@@ -601,6 +684,8 @@ class FullScreenVideoCell: UICollectionViewCell {
         }
     }
     
+    /// Fetches and updates the bookmarks count for a video
+    /// - Parameter video: The video to fetch bookmarks count for
     func fetchBookmarksCount(for video: Video) {
         let db = Firestore.firestore()
         db.collection("video_bookmarks")
@@ -613,10 +698,11 @@ class FullScreenVideoCell: UICollectionViewCell {
                     return
                 }
                 
+                // Update UI with bookmarks count
                 let bookmarksCount = snapshot?.documents.count ?? 0
                 self.bookmarkCountLabel.text = "\(bookmarksCount)"
                 
-                // Update the video document with the current count if it's different
+                // Update video document if count has changed
                 if bookmarksCount != video.bookmarksCount {
                     db.collection("videos").document(video.id).updateData([
                         "bookmarks_count": bookmarksCount
@@ -625,9 +711,12 @@ class FullScreenVideoCell: UICollectionViewCell {
             }
     }
     
+    /// Fetches and displays the creator's avatar
+    /// - Parameter video: The video whose creator's avatar to fetch
     private func fetchCreatorAvatar(for video: Video) {
         let db = Firestore.firestore()
         
+        // Fetch creator's user data
         db.collection("users").document(video.creatorId).getDocument { [weak self] snapshot, error in
             guard let self = self,
                   let data = snapshot?.data(),
@@ -637,7 +726,7 @@ class FullScreenVideoCell: UICollectionViewCell {
             
             if let avatarUrl = data["avatar"] as? String,
                let url = URL(string: avatarUrl) {
-                // Create a URLSession data task to fetch the image
+                // Fetch avatar image
                 URLSession.shared.dataTask(with: url) { [weak self] data, response, error in
                     if let error = error {
                         print("Error loading avatar: \(error.localizedDescription)")
@@ -651,19 +740,8 @@ class FullScreenVideoCell: UICollectionViewCell {
                     if let data = data,
                        let image = UIImage(data: data) {
                         DispatchQueue.main.async {
-                            // Clear any existing content
-                            self?.creatorAvatarButton.subviews.forEach { $0.removeFromSuperview() }
-                            self?.creatorAvatarButton.backgroundColor = .clear
-                            
-                            // Create a new UIImageView with the correct size and configuration
-                            let imageView = UIImageView(frame: self?.creatorAvatarButton.bounds ?? .zero)
-                            imageView.contentMode = .scaleAspectFill
-                            imageView.clipsToBounds = true
-                            imageView.image = image
-                            imageView.autoresizingMask = [.flexibleWidth, .flexibleHeight]
-                            
-                            // Add the image view to the button
-                            self?.creatorAvatarButton.addSubview(imageView)
+                            // Update avatar button with fetched image
+                            self?.updateAvatarWithImage(image)
                         }
                     } else {
                         // Fall back to default avatar if image data is invalid
@@ -679,12 +757,32 @@ class FullScreenVideoCell: UICollectionViewCell {
         }
     }
     
+    /// Updates the avatar button with an image
+    /// - Parameter image: The image to display
+    private func updateAvatarWithImage(_ image: UIImage) {
+        // Clear existing content
+        creatorAvatarButton.subviews.forEach { $0.removeFromSuperview() }
+        creatorAvatarButton.backgroundColor = .clear
+        
+        // Create and configure image view
+        let imageView = UIImageView(frame: creatorAvatarButton.bounds)
+        imageView.contentMode = .scaleAspectFill
+        imageView.clipsToBounds = true
+        imageView.image = image
+        imageView.autoresizingMask = [.flexibleWidth, .flexibleHeight]
+        
+        // Add image view to button
+        creatorAvatarButton.addSubview(imageView)
+    }
+    
+    /// Sets up a default avatar with the user's first initial
+    /// - Parameter username: The username to use for the avatar
     private func setupDefaultAvatar(with username: String) {
-        // Clear any existing content
+        // Clear existing content
         creatorAvatarButton.setImage(nil, for: .normal)
         creatorAvatarButton.subviews.forEach { $0.removeFromSuperview() }
         
-        // Create default avatar with first letter
+        // Create label with first initial
         let firstLetter = String(username.prefix(1)).uppercased()
         let label = UILabel()
         label.text = firstLetter
@@ -707,31 +805,38 @@ class FullScreenVideoCell: UICollectionViewCell {
     }
     
     // MARK: - Action Methods
+    
+    /// Handles tap on creator's avatar
     @objc private func creatorAvatarTapped() {
         guard let video = currentVideo else { return }
         delegate?.didTapCreatorAvatar(for: video)
     }
     
+    /// Handles tap on like button
     @objc private func likeTapped() {
         guard let video = currentVideo else { return }
         delegate?.didTapLike(for: video)
     }
     
+    /// Handles tap on comment button
     @objc private func commentTapped() {
         guard let video = currentVideo else { return }
         delegate?.didTapComment(for: video)
     }
     
+    /// Handles tap on bookmark button
     @objc private func bookmarkTapped() {
         guard let video = currentVideo else { return }
         delegate?.didTapBookmark(for: video)
     }
     
+    /// Handles tap on share button
     @objc private func shareTapped() {
         guard let video = currentVideo else { return }
         delegate?.didTapShare(for: video)
     }
     
+    /// Fetches and updates the comments count for a video
     private func fetchCommentsCount(for video: Video) {
         let db = Firestore.firestore()
         db.collection("video_comments")
@@ -746,51 +851,98 @@ class FullScreenVideoCell: UICollectionViewCell {
     }
 }
 
-// MARK: - FullScreenVideoCellDelegate
+// MARK: - FullScreenVideoCellDelegate Protocol
+/// Protocol defining the interface for handling user interactions with video cells
 protocol FullScreenVideoCellDelegate: AnyObject {
+    /// Called when the creator's avatar is tapped
     func didTapCreatorAvatar(for video: Video)
+    /// Called when the like button is tapped
     func didTapLike(for video: Video)
+    /// Called when the comment button is tapped
     func didTapComment(for video: Video)
+    /// Called when the bookmark button is tapped
     func didTapBookmark(for video: Video)
+    /// Called when the share button is tapped
     func didTapShare(for video: Video)
 }
 
-// Add after the VideoCache class
+// MARK: - VideoLoadingWindow Implementation
+/// Manages the window of videos that should be kept loaded in memory
 struct VideoLoadingWindow {
-    static let windowSize = 5 // Keep current + 2 videos in each direction
+    /// Number of videos to keep loaded (current + adjacent)
+    static let windowSize = 5
+    
+    /// Current center index of the window
     let centerIndex: Int
     
+    /// Range of indices that should be kept loaded
     var indexRange: Range<Int> {
         let start = max(0, centerIndex - VideoLoadingWindow.windowSize/2)
         let end = centerIndex + VideoLoadingWindow.windowSize/2
         return start..<end
     }
     
+    /// Determines if a video at the given index should be kept loaded
+    /// - Parameters:
+    ///   - index: The index to check
+    ///   - totalCount: Total number of videos
+    /// - Returns: Whether the video should be kept loaded
     func shouldKeepLoaded(index: Int, totalCount: Int) -> Bool {
         guard index >= 0 && index < totalCount else { return false }
         return abs(index - centerIndex) <= VideoLoadingWindow.windowSize/2
     }
 }
 
+// MARK: - VideoScrollContentViewController Implementation
 class VideoScrollContentViewController: UIViewController {
+    // MARK: - Properties
+    
+    /// Array of videos to display
     private var videos: [Video] = []
+    
+    /// Currently playing video cell
     private var currentlyPlayingCell: FullScreenVideoCell?
+    
+    /// Cache for prefetched video assets
     private var prefetchedAssets: [String: AVURLAsset] = [:]
+    
+    /// Current loading window for memory optimization
     private var loadingWindow: VideoLoadingWindow?
+    
+    /// Timestamp of last cleanup operation
     private var lastCleanupTime: Date = Date()
+    
+    /// Interval between cleanup operations
     private var cleanupInterval: TimeInterval = 2.0
     
-    // Pagination and real-time updates
+    // MARK: - Pagination Properties
+    
+    /// Listener for real-time video updates
     private var videosListener: ListenerRegistration?
+    
+    /// Last document fetched for pagination
     private var lastDocument: DocumentSnapshot?
+    
+    /// Number of videos to fetch per batch
     private let batchSize = 3
+    
+    /// Flag indicating if more videos are being loaded
     private var isLoadingMore = false
+    
+    /// Flag indicating if there are more videos to load
     private var hasMoreVideos = true
     
-    // Add memory usage tracking
-    private var memoryUsageLogger: Timer?
-    private let maxMemoryThreshold: UInt64 = 300 * 1024 * 1024 // 300MB threshold
+    // MARK: - Memory Management Properties
     
+    /// Timer for logging memory usage
+    private var memoryUsageLogger: Timer?
+    
+    /// Maximum memory threshold (300MB)
+    private let maxMemoryThreshold: UInt64 = 300 * 1024 * 1024
+    
+    // MARK: - UI Components
+    
+    /// Collection view for displaying videos
     private let collectionView: UICollectionView = {
         let layout = UICollectionViewFlowLayout()
         layout.scrollDirection = .vertical
@@ -1020,6 +1172,20 @@ class VideoScrollContentViewController: UIViewController {
         }
     }
     
+    // MARK: - UICollectionView Data Source & Delegate
+    func collectionView(_ collectionView: UICollectionView, numberOfItemsInSection section: Int) -> Int {
+        print("📊 Number of videos: \(videos.count)")
+        return videos.count
+    }
+    
+    func collectionView(_ collectionView: UICollectionView, layout collectionViewLayout: UICollectionViewLayout, sizeForItemAt indexPath: IndexPath) -> CGSize {
+        // Return full screen size for each cell
+        return CGSize(
+            width: collectionView.bounds.width,
+            height: collectionView.bounds.height
+        )
+    }
+    
     func collectionView(_ collectionView: UICollectionView, cellForItemAt indexPath: IndexPath) -> UICollectionViewCell {
         print("\n🔄 Creating/reusing cell at index: \(indexPath.item)")
         guard let cell = collectionView.dequeueReusableCell(withReuseIdentifier: FullScreenVideoCell.identifier, for: indexPath) as? FullScreenVideoCell else {
@@ -1031,7 +1197,7 @@ class VideoScrollContentViewController: UIViewController {
         cell.delegate = self
         cell.configure(with: video)
         
-        // Check if this should be the playing cell
+        // Check if cell should be playing
         let visibleRect = CGRect(origin: collectionView.contentOffset, size: collectionView.bounds.size)
         let cellRect = collectionView.layoutAttributesForItem(at: indexPath)?.frame ?? .zero
         if visibleRect.intersects(cellRect) {
@@ -1042,6 +1208,33 @@ class VideoScrollContentViewController: UIViewController {
         }
         
         return cell
+    }
+    
+    func scrollViewDidEndDecelerating(_ scrollView: UIScrollView) {
+        let visibleRect = CGRect(origin: collectionView.contentOffset, size: collectionView.bounds.size)
+        let visiblePoint = CGPoint(x: visibleRect.midX, y: visibleRect.midY)
+        
+        // Update playing cell when scrolling stops
+        if let indexPath = collectionView.indexPathForItem(at: visiblePoint),
+           let cell = collectionView.cellForItem(at: indexPath) as? FullScreenVideoCell {
+            print("📱 Switching to video at index: \(indexPath.item)")
+            currentlyPlayingCell?.pause()
+            cell.play()
+            currentlyPlayingCell = cell
+            
+            // Update loading window and perform cleanup
+            updateLoadingWindow()
+        }
+    }
+    
+    func scrollViewDidScroll(_ scrollView: UIScrollView) {
+        // Check if we need to load more videos
+        let threshold: CGFloat = 100.0 // Load more when within 100 points of the bottom
+        let distance = scrollView.contentSize.height - (scrollView.contentOffset.y + scrollView.bounds.height)
+        
+        if distance < threshold && !isLoadingMore && hasMoreVideos {
+            fetchVideos(isInitialFetch: false)
+        }
     }
     
     override func viewDidLayoutSubviews() {
@@ -1174,55 +1367,26 @@ class VideoScrollContentViewController: UIViewController {
     }
 }
 
-// Helper extension for safe array access
+// MARK: - Helper Extensions
+/**
+ * Extension providing safe array access to prevent index out of bounds errors
+ */
 extension Array {
     func safe(_ index: Index) -> Element? {
         return indices.contains(index) ? self[index] : nil
     }
 }
 
-extension VideoScrollContentViewController: UICollectionViewDataSource, UICollectionViewDelegate, UICollectionViewDelegateFlowLayout {
-    func collectionView(_ collectionView: UICollectionView, numberOfItemsInSection section: Int) -> Int {
-        print("📊 Number of videos: \(videos.count)")
-        return videos.count
-    }
-    
-    func collectionView(_ collectionView: UICollectionView, layout collectionViewLayout: UICollectionViewLayout, sizeForItemAt indexPath: IndexPath) -> CGSize {
-        // Calculate size based on collection view bounds, accounting for tab bar
-        return CGSize(
-            width: collectionView.bounds.width,
-            height: collectionView.bounds.height
-        )
-    }
-    
-    func scrollViewDidEndDecelerating(_ scrollView: UIScrollView) {
-        let visibleRect = CGRect(origin: collectionView.contentOffset, size: collectionView.bounds.size)
-        let visiblePoint = CGPoint(x: visibleRect.midX, y: visibleRect.midY)
-        
-        if let indexPath = collectionView.indexPathForItem(at: visiblePoint),
-           let cell = collectionView.cellForItem(at: indexPath) as? FullScreenVideoCell {
-            print("📱 Switching to video at index: \(indexPath.item)")
-            currentlyPlayingCell?.pause()
-            cell.play()
-            currentlyPlayingCell = cell
-            
-            // Update loading window and perform cleanup
-            updateLoadingWindow()
-        }
-    }
-    
-    func scrollViewDidScroll(_ scrollView: UIScrollView) {
-        let threshold: CGFloat = 100.0 // Load more when within 100 points of the bottom
-        let distance = scrollView.contentSize.height - (scrollView.contentOffset.y + scrollView.bounds.height)
-        
-        if distance < threshold && !isLoadingMore && hasMoreVideos {
-            fetchVideos(isInitialFetch: false)
-        }
-    }
-}
-
+// MARK: - FullScreenVideoCell Delegate Implementation
+/**
+ * Extension implementing delegate methods for handling user interactions with video cells
+ */
 extension VideoScrollContentViewController: FullScreenVideoCellDelegate {
+    
+    /// Handles tapping on the creator's avatar
+    /// - Parameter video: The video whose creator was tapped
     func didTapCreatorAvatar(for video: Video) {
+        // Create and present creator's profile view controller
         let profileVC = PublicProfileViewController()
         profileVC.userId = video.creatorId
         profileVC.modalPresentationStyle = .fullScreen
@@ -1230,6 +1394,8 @@ extension VideoScrollContentViewController: FullScreenVideoCellDelegate {
         present(profileVC, animated: true)
     }
     
+    /// Handles tapping the like button
+    /// - Parameter video: The video to like/unlike
     func didTapLike(for video: Video) {
         guard let currentUserId = Auth.auth().currentUser?.uid else { return }
         
@@ -1242,21 +1408,19 @@ extension VideoScrollContentViewController: FullScreenVideoCellDelegate {
                 guard let exists = snapshot?.exists else { return }
                 
                 if exists {
-                    // Unlike - Animate immediately for user feedback
+                    // Unlike video
                     visibleCell.animateLikeButton(isLiked: false)
-                    // Then update backend
                     likeRef.delete { error in
                         if error == nil {
                             visibleCell.fetchLikesCount(for: video)
                         } else {
-                            // Revert animation if there was an error
+                            // Revert animation on error
                             visibleCell.animateLikeButton(isLiked: true)
                         }
                     }
                 } else {
-                    // Like - Animate immediately for user feedback
+                    // Like video
                     visibleCell.animateLikeButton(isLiked: true)
-                    // Then update backend
                     likeRef.setData([
                         "video_id": video.id,
                         "user_id": currentUserId,
@@ -1265,7 +1429,7 @@ extension VideoScrollContentViewController: FullScreenVideoCellDelegate {
                         if error == nil {
                             visibleCell.fetchLikesCount(for: video)
                         } else {
-                            // Revert animation if there was an error
+                            // Revert animation on error
                             visibleCell.animateLikeButton(isLiked: false)
                         }
                     }
@@ -1274,6 +1438,9 @@ extension VideoScrollContentViewController: FullScreenVideoCellDelegate {
         }
     }
     
+    /// Finds the visible cell for a given video
+    /// - Parameter video: The video to find the cell for
+    /// - Returns: The FullScreenVideoCell if found, nil otherwise
     private func findVisibleCell(for video: Video) -> FullScreenVideoCell? {
         for cell in collectionView.visibleCells {
             if let videoCell = cell as? FullScreenVideoCell,
@@ -1284,14 +1451,17 @@ extension VideoScrollContentViewController: FullScreenVideoCellDelegate {
         return nil
     }
     
+    /// Handles tapping the comment button
+    /// - Parameter video: The video to show comments for
     func didTapComment(for video: Video) {
+        // Create and configure comments view controller
         let commentsVC = CommentsViewController()
         commentsVC.videoId = video.id
         commentsVC.modalPresentationStyle = .overFullScreen
         
-        // Set up comment count update handlers
+        // Configure comment count update handlers
         commentsVC.onCommentAdded = { [weak self] in
-            // Optimistically update the comment count in the UI
+            // Optimistically update comment count
             if let cell = self?.findVisibleCell(for: video) {
                 let currentCount = Int(cell.commentCountLabel.text ?? "0") ?? 0
                 cell.commentCountLabel.text = "\(currentCount + 1)"
@@ -1299,7 +1469,7 @@ extension VideoScrollContentViewController: FullScreenVideoCellDelegate {
         }
         
         commentsVC.onCommentDeleted = { [weak self] in
-            // Optimistically update the comment count in the UI
+            // Optimistically update comment count
             if let cell = self?.findVisibleCell(for: video) {
                 let currentCount = Int(cell.commentCountLabel.text ?? "0") ?? 0
                 cell.commentCountLabel.text = "\(max(0, currentCount - 1))"
@@ -1309,6 +1479,8 @@ extension VideoScrollContentViewController: FullScreenVideoCellDelegate {
         present(commentsVC, animated: false)
     }
     
+    /// Handles tapping the bookmark button
+    /// - Parameter video: The video to bookmark/unbookmark
     func didTapBookmark(for video: Video) {
         guard let currentUserId = Auth.auth().currentUser?.uid else { return }
         
@@ -1321,21 +1493,19 @@ extension VideoScrollContentViewController: FullScreenVideoCellDelegate {
                 guard let exists = snapshot?.exists else { return }
                 
                 if exists {
-                    // Remove bookmark - Animate immediately for user feedback
+                    // Remove bookmark
                     visibleCell.animateBookmarkButton(isBookmarked: false)
-                    // Then update backend
                     bookmarkRef.delete { error in
                         if error == nil {
                             visibleCell.fetchBookmarksCount(for: video)
                         } else {
-                            // Revert animation if there was an error
+                            // Revert animation on error
                             visibleCell.animateBookmarkButton(isBookmarked: true)
                         }
                     }
                 } else {
-                    // Add bookmark - Animate immediately for user feedback
+                    // Add bookmark
                     visibleCell.animateBookmarkButton(isBookmarked: true)
-                    // Then update backend
                     bookmarkRef.setData([
                         "video_id": video.id,
                         "user_id": currentUserId,
@@ -1344,56 +1514,47 @@ extension VideoScrollContentViewController: FullScreenVideoCellDelegate {
                         if error == nil {
                             visibleCell.fetchBookmarksCount(for: video)
                         } else {
-                            // Revert animation if there was an error
+                            // Revert animation on error
                             visibleCell.animateBookmarkButton(isBookmarked: false)
                         }
                     }
                 }
             }
         }
-        bookmarkRef.getDocument { [weak self] snapshot, error in
-            guard let exists = snapshot?.exists else { return }
-            
-            if exists {
-                // Remove bookmark
-                bookmarkRef.delete()
-            } else {
-                // Add bookmark
-                bookmarkRef.setData([
-                    "video_id": video.id,
-                    "user_id": currentUserId,
-                    "created_at": FieldValue.serverTimestamp()
-                ])
-            }
-        }
     }
     
+    /// Handles tapping the share button
+    /// - Parameter video: The video to share
     func didTapShare(for video: Video) {
-        // Create activity view controller for sharing
+        // Create and present share sheet
         let items = [URL(string: video.storagePath)].compactMap { $0 }
         let ac = UIActivityViewController(activityItems: items, applicationActivities: nil)
         present(ac, animated: true)
     }
 }
 
-// MARK: - UICollectionViewDataSourcePrefetching
+// MARK: - UICollectionView Prefetching
 extension VideoScrollContentViewController: UICollectionViewDataSourcePrefetching {
+    
+    /// Prefetches items at the specified index paths
     func collectionView(_ collectionView: UICollectionView, prefetchItemsAt indexPaths: [IndexPath]) {
         guard let window = loadingWindow else { return }
         
+        // Filter index paths to only those within the loading window
         let indexPathsInWindow = indexPaths.filter {
             window.shouldKeepLoaded(index: $0.item, totalCount: videos.count)
         }
         
         print("\n🔄 Prefetching items within window: \(indexPathsInWindow.map { $0.item })")
         
+        // Prefetch each video in the window
         for indexPath in indexPathsInWindow {
             guard indexPath.item < videos.count else { continue }
             let video = videos[indexPath.item]
             
             guard let videoURL = URL(string: video.storagePath) else { continue }
             
-            // Check if already prefetched
+            // Skip if already prefetched
             if prefetchedAssets[video.id] != nil { continue }
             
             // Create and load asset
@@ -1417,6 +1578,7 @@ extension VideoScrollContentViewController: UICollectionViewDataSourcePrefetchin
         }
     }
     
+    /// Cancels prefetching for items at the specified index paths
     func collectionView(_ collectionView: UICollectionView, cancelPrefetchingForItemsAt indexPaths: [IndexPath]) {
         print("\n❌ Cancelling prefetch for indices: \(indexPaths.map { $0.item })")
         cancelPrefetch(for: indexPaths.map { $0.item })
