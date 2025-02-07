@@ -8,6 +8,7 @@ class ChatViewController: UIViewController {
     private let conversation: Conversation
     private var messages: [Message] = []
     private var messagesListener: ListenerRegistration?
+    private var otherUser: User?
     
     // MARK: - UI Components
     private let collectionView: UICollectionView = {
@@ -49,6 +50,23 @@ class ChatViewController: UIViewController {
         button.tintColor = .systemBlue
         button.translatesAutoresizingMaskIntoConstraints = false
         return button
+    }()
+    
+    private let avatarImageView: UIImageView = {
+        let iv = UIImageView()
+        iv.backgroundColor = .systemGray5
+        iv.layer.cornerRadius = 16
+        iv.clipsToBounds = true
+        iv.contentMode = .scaleAspectFill
+        iv.translatesAutoresizingMaskIntoConstraints = false
+        return iv
+    }()
+    
+    private let nameLabel: UILabel = {
+        let label = UILabel()
+        label.font = .systemFont(ofSize: 16, weight: .semibold)
+        label.translatesAutoresizingMaskIntoConstraints = false
+        return label
     }()
     
     // MARK: - Lifecycle
@@ -123,8 +141,98 @@ class ChatViewController: UIViewController {
     }
     
     private func setupNavigationBar() {
-        navigationItem.title = conversation.otherUserInfo?.username ?? "Chat"
+        // Create custom title view
+        let titleView = UIView()
+        titleView.translatesAutoresizingMaskIntoConstraints = false
+        
+        titleView.addSubview(avatarImageView)
+        titleView.addSubview(nameLabel)
+        
+        NSLayoutConstraint.activate([
+            avatarImageView.leadingAnchor.constraint(equalTo: titleView.leadingAnchor),
+            avatarImageView.centerYAnchor.constraint(equalTo: titleView.centerYAnchor),
+            avatarImageView.widthAnchor.constraint(equalToConstant: 32),
+            avatarImageView.heightAnchor.constraint(equalToConstant: 32),
+            
+            nameLabel.leadingAnchor.constraint(equalTo: avatarImageView.trailingAnchor, constant: 8),
+            nameLabel.trailingAnchor.constraint(equalTo: titleView.trailingAnchor),
+            nameLabel.centerYAnchor.constraint(equalTo: titleView.centerYAnchor)
+        ])
+        
+        navigationItem.titleView = titleView
         navigationController?.navigationBar.prefersLargeTitles = false
+        
+        // Fetch other user's information
+        fetchOtherUserInfo()
+    }
+    
+    private func fetchOtherUserInfo() {
+        guard let currentUserId = Auth.auth().currentUser?.uid else { return }
+        
+        // Find the other user's ID from participants
+        let otherUserId = conversation.participants.first { $0 != currentUserId } ?? ""
+        
+        let db = Firestore.firestore()
+        db.collection("users").document(otherUserId).getDocument { [weak self] snapshot, error in
+            guard let self = self,
+                  let data = snapshot?.data() else { return }
+            
+            // Create user object
+            self.otherUser = User(from: data, uid: otherUserId)
+            
+            // Update UI
+            DispatchQueue.main.async {
+                self.nameLabel.text = self.otherUser?.username
+                
+                if let username = self.otherUser?.username {
+                    if let avatarUrl = self.otherUser?.avatar,
+                       let url = URL(string: avatarUrl) {
+                        // Load avatar image
+                        URLSession.shared.dataTask(with: url) { [weak self] data, response, error in
+                            if let data = data,
+                               let image = UIImage(data: data) {
+                                DispatchQueue.main.async {
+                                    self?.avatarImageView.image = image
+                                }
+                            } else {
+                                DispatchQueue.main.async {
+                                    self?.setupDefaultAvatar(with: username)
+                                }
+                            }
+                        }.resume()
+                    } else {
+                        self.setupDefaultAvatar(with: username)
+                    }
+                }
+            }
+        }
+    }
+    
+    private func setupDefaultAvatar(with username: String) {
+        // Clear any existing content
+        avatarImageView.image = nil
+        avatarImageView.subviews.forEach { $0.removeFromSuperview() }
+        
+        let firstChar = String(username.prefix(1)).uppercased()
+        
+        // Generate color based on username
+        let hue = CGFloat(username.hashValue) / CGFloat(Int.max)
+        let color = UIColor(hue: hue, saturation: 0.5, brightness: 0.8, alpha: 1.0)
+        
+        avatarImageView.backgroundColor = color
+        
+        // Create label for initial
+        let label = UILabel()
+        label.text = firstChar
+        label.font = .systemFont(ofSize: 14, weight: .medium)
+        label.textColor = .white
+        label.translatesAutoresizingMaskIntoConstraints = false
+        
+        avatarImageView.addSubview(label)
+        NSLayoutConstraint.activate([
+            label.centerXAnchor.constraint(equalTo: avatarImageView.centerXAnchor),
+            label.centerYAnchor.constraint(equalTo: avatarImageView.centerYAnchor)
+        ])
     }
     
     private func setupKeyboardObservers() {

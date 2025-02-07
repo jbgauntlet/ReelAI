@@ -1,6 +1,6 @@
 import FirebaseFirestore
 
-struct Conversation {
+class Conversation {
     let id: String
     let participants: [String]
     let lastMessage: String?

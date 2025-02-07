@@ -103,13 +103,26 @@ class ConversationCell: UITableViewCell {
     
     // MARK: - Configuration
     func configure(with conversation: Conversation) {
-        usernameLabel.text = conversation.otherUserInfo?.username ?? "User"
+        // Clear any existing avatar content
+        avatarImageView.image = nil
+        avatarImageView.subviews.forEach { $0.removeFromSuperview() }
+        
+        // Set username
+        if let username = conversation.otherUserInfo?.username {
+            usernameLabel.text = username
+        } else {
+            usernameLabel.text = "User"
+        }
+        
+        // Set last message
         lastMessageLabel.text = conversation.lastMessage ?? "No messages yet"
         
+        // Set timestamp
         let formatter = RelativeDateTimeFormatter()
         formatter.unitsStyle = .short
         timestampLabel.text = formatter.localizedString(for: conversation.lastMessageTimestamp, relativeTo: Date())
         
+        // Set unread count
         if conversation.unreadCount > 0 {
             unreadBadge.isHidden = false
             unreadCountLabel.text = "\(min(conversation.unreadCount, 99))"
@@ -117,18 +130,28 @@ class ConversationCell: UITableViewCell {
             unreadBadge.isHidden = true
         }
         
-        if let avatarUrl = conversation.otherUserInfo?.avatar,
-           let url = URL(string: avatarUrl) {
-            // Load avatar image
-            URLSession.shared.dataTask(with: url) { [weak self] data, _, _ in
-                if let data = data, let image = UIImage(data: data) {
-                    DispatchQueue.main.async {
-                        self?.avatarImageView.image = image
+        // Handle avatar
+        if let username = conversation.otherUserInfo?.username {
+            if let avatarUrl = conversation.otherUserInfo?.avatar,
+               let url = URL(string: avatarUrl) {
+                // Load avatar image
+                URLSession.shared.dataTask(with: url) { [weak self] data, response, error in
+                    if let data = data,
+                       let image = UIImage(data: data) {
+                        DispatchQueue.main.async {
+                            self?.avatarImageView.image = image
+                        }
+                    } else {
+                        DispatchQueue.main.async {
+                            self?.setupDefaultAvatar(with: username)
+                        }
                     }
-                }
-            }.resume()
+                }.resume()
+            } else {
+                setupDefaultAvatar(with: username)
+            }
         } else {
-            setupDefaultAvatar(with: conversation.otherUserInfo?.username ?? "U")
+            setupDefaultAvatar(with: "U")
         }
     }
     

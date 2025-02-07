@@ -116,12 +116,34 @@ class MessagesViewController: UIViewController {
                 
                 guard let documents = snapshot?.documents else { return }
                 
-                self.conversations = documents.compactMap { document in
+                let conversations = documents.compactMap { document -> Conversation? in
                     Conversation(from: document)
                 }
                 
+                self.conversations = conversations
                 self.emptyStateLabel.isHidden = !self.conversations.isEmpty
                 self.tableView.reloadData()
+                
+                // Fetch user info for each conversation
+                for (index, conversation) in conversations.enumerated() {
+                    guard let otherUserId = conversation.participants.first(where: { $0 != currentUserId }) else { continue }
+                    
+                    db.collection("users").document(otherUserId).getDocument { [weak self] snapshot, error in
+                        guard let self = self,
+                              let data = snapshot?.data(),
+                              let user = User(from: data, uid: otherUserId) else { return }
+                        
+                        conversation.otherUserInfo = user
+                        
+                        // Update the specific row
+                        let indexPath = IndexPath(row: index, section: 0)
+                        DispatchQueue.main.async {
+                            if self.tableView.numberOfRows(inSection: 0) > index {
+                                self.tableView.reloadRows(at: [indexPath], with: .none)
+                            }
+                        }
+                    }
+                }
             }
     }
 }
