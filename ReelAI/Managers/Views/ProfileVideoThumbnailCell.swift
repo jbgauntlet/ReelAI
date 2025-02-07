@@ -112,30 +112,38 @@ class ProfileVideoThumbnailCell: UICollectionViewCell {
         // Set views count
         viewsLabel.text = "\(video.viewsCount) views"
         
-        // Get video thumbnail
+        // Get video thumbnail using only video ID
         let storage = Storage.storage()
-        let thumbnailPath = "thumbnails/\(video.id).jpg"
+        let thumbnailPath = "thumbnails/\(video.id).png"
         let thumbnailRef = storage.reference().child(thumbnailPath)
         
         // First try to get thumbnail
         downloadTask = thumbnailRef.getData(maxSize: 1 * 1024 * 1024) { [weak self] data, error in
             guard let self = self, self.currentVideoId == video.id else { return }
             
-            if let data = data, let image = UIImage(data: data) {
-                DispatchQueue.main.async {
-                    // Verify we're still showing the same video
-                    if self.currentVideoId == video.id {
-                        self.thumbnailImageView.image = image
+            if let data = data {
+                // Process image on background thread
+                DispatchQueue.global(qos: .userInitiated).async {
+                    if let image = UIImage(data: data) {
+                        DispatchQueue.main.async {
+                            // Verify we're still showing the same video
+                            if self.currentVideoId == video.id {
+                                self.thumbnailImageView.image = image
+                            }
+                        }
+                    } else {
+                        // If thumbnail loading fails, try to generate one from the video
+                        self.generateThumbnail(from: video.storagePath, for: video)
                     }
                 }
             } else {
-                // If no thumbnail, try to generate one from the video
-                self.generateThumbnail(from: video.storagePath, for: video.id)
+                // If no thumbnail exists, try to generate one from the video
+                self.generateThumbnail(from: video.storagePath, for: video)
             }
         }
     }
     
-    private func generateThumbnail(from videoUrl: String, for videoId: String) {
+    private func generateThumbnail(from videoUrl: String, for video: Video) {
         guard let url = URL(string: videoUrl) else { return }
         
         let asset = AVAsset(url: url)
@@ -144,20 +152,20 @@ class ProfileVideoThumbnailCell: UICollectionViewCell {
         
         // Create a work item for thumbnail generation
         let workItem = DispatchWorkItem { [weak self] in
-            guard let self = self, self.currentVideoId == videoId else { return }
+            guard let self = self, self.currentVideoId == video.id else { return }
             
             let time = CMTime(seconds: 0.0, preferredTimescale: 600)
             imageGenerator.generateCGImagesAsynchronously(forTimes: [NSValue(time: time)]) { [weak self] _, cgImage, _, _, _ in
-                guard let self = self, self.currentVideoId == videoId else { return }
+                guard let self = self, self.currentVideoId == video.id else { return }
                 
                 if let cgImage = cgImage {
                     let thumbnail = UIImage(cgImage: cgImage)
                     DispatchQueue.main.async {
                         // Final verification before setting the image
-                        if self.currentVideoId == videoId {
+                        if self.currentVideoId == video.id {
                             self.thumbnailImageView.image = thumbnail
                             // Save thumbnail for future use
-                            self.saveThumbnail(thumbnail, for: videoUrl)
+                            self.saveThumbnail(thumbnail, for: video)
                         }
                     }
                 }
@@ -169,16 +177,65 @@ class ProfileVideoThumbnailCell: UICollectionViewCell {
         DispatchQueue.global(qos: .userInitiated).async(execute: workItem)
     }
     
-    private func saveThumbnail(_ image: UIImage, for videoUrl: String) {
-        guard let data = image.jpegData(compressionQuality: 0.7) else { return }
+    private func saveThumbnail(_ image: UIImage, for video: Video) {
+        // Calculate size that maintains aspect ratio
+        let maxDimension: CGFloat = 720  // Increased for better quality
+        let size = image.size
         
+        let widthRatio = maxDimension / size.width
+        let heightRatio = maxDimension / size.height
+        let scale = min(widthRatio, heightRatio)  // Use the smaller scale to fit within bounds
+        
+        // Only scale down, never up
+        let finalScale = scale < 1.0 ? scale : 1.0
+        
+        let newSize = CGSize(
+            width: size.width * finalScale,
+            height: size.height * finalScale
+        )
+        
+        // Create a properly scaled version of the image
+        UIGraphicsBeginImageContextWithOptions(newSize, false, 1.0)
+        defer { UIGraphicsEndImageContext() }
+        
+        // Draw maintaining aspect ratio
+        let rect = CGRect(origin: .zero, size: newSize)
+        image.draw(in: rect)
+        
+        guard let resizedImage = UIGraphicsGetImageFromCurrentImageContext(),
+              let data = resizedImage.pngData() else {
+            print("❌ Failed to create thumbnail data")
+            return
+        }
+        
+        // Use simplified path structure: thumbnails/{videoId}.png
         let storage = Storage.storage()
-        let thumbnailPath = "thumbnails/\(videoUrl.hashValue).jpg"
+        let thumbnailPath = "thumbnails/\(video.id).png"
         let thumbnailRef = storage.reference().child(thumbnailPath)
         
-        thumbnailRef.putData(data, metadata: nil) { metadata, error in
+        // Add metadata
+        let metadata = StorageMetadata()
+        metadata.contentType = "image/png"
+        
+        print("📝 Attempting to save thumbnail:")
+        print("   Path: \(thumbnailPath)")
+        print("   Original Size: \(image.size)")
+        print("   New Size: \(newSize)")
+        print("   Data Size: \(data.count) bytes")
+        print("   Content Type: \(metadata.contentType ?? "unknown")")
+        
+        thumbnailRef.putData(data, metadata: metadata) { metadata, error in
             if let error = error {
-                print("Error saving thumbnail: \(error)")
+                print("❌ Error saving thumbnail:")
+                print("   Error: \(error.localizedDescription)")
+                print("   Details: \(error)")
+            } else {
+                print("✅ Successfully saved thumbnail")
+                print("   Path: \(thumbnailPath)")
+                if let metadata = metadata {
+                    print("   Size: \(metadata.size) bytes")
+                    print("   Content Type: \(metadata.contentType ?? "unknown")")
+                }
             }
         }
     }
