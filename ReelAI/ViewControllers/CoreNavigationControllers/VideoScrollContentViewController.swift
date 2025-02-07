@@ -269,6 +269,16 @@ class FullScreenVideoCell: UICollectionViewCell {
     weak var delegate: FullScreenVideoCellDelegate?
     var currentVideo: Video?
     
+    /// Flag to track if video is currently playing
+    private var isPlaying = false
+    
+    /// Tap gesture recognizer for play/pause
+    private lazy var tapGesture: UITapGestureRecognizer = {
+        let gesture = UITapGestureRecognizer(target: self, action: #selector(handleTap(_:)))
+        gesture.numberOfTapsRequired = 1
+        return gesture
+    }()
+    
     // MARK: - Setup Methods
     
     /// Initializes and sets up the cell's UI components
@@ -293,6 +303,10 @@ class FullScreenVideoCell: UICollectionViewCell {
         contentView.addSubview(playerView)
         contentView.addSubview(loadingIndicator)
         setupInfoPanel()
+        
+        // Add tap gesture recognizer
+        playerView.addGestureRecognizer(tapGesture)
+        playerView.isUserInteractionEnabled = true
         
         // Set up constraints
         NSLayoutConstraint.activate([
@@ -392,6 +406,20 @@ class FullScreenVideoCell: UICollectionViewCell {
         commentButton.addTarget(self, action: #selector(commentTapped), for: .touchUpInside)
         bookmarkButton.addTarget(self, action: #selector(bookmarkTapped), for: .touchUpInside)
         shareButton.addTarget(self, action: #selector(shareTapped), for: .touchUpInside)
+    }
+    
+    /// Handles tap gesture for play/pause
+    @objc private func handleTap(_ gesture: UITapGestureRecognizer) {
+        print("👆 Tap detected on video cell \(cellId)")
+        print("Current isPlaying state: \(isPlaying)")
+        
+        if isPlaying {
+            print("⏸️ User requested pause")
+            pause()
+        } else {
+            print("▶️ User requested play")
+            play()
+        }
     }
     
     // MARK: - Video Configuration Methods
@@ -547,6 +575,10 @@ class FullScreenVideoCell: UICollectionViewCell {
     /// Restarts video from beginning and plays
     func restart() {
         print("🔄 Restarting video in cell \(cellId)")
+        print("Player exists: \(player != nil)")
+        print("Player item exists: \(player?.currentItem != nil)")
+        print("Player item status: \(player?.currentItem?.status.rawValue ?? -1)")
+        isPlaying = true  // Set state before playing
         player?.seek(to: .zero)
         player?.play()
     }
@@ -554,12 +586,20 @@ class FullScreenVideoCell: UICollectionViewCell {
     /// Starts video playback
     func play() {
         print("▶️ Playing video in cell \(cellId)")
+        print("Player exists: \(player != nil)")
+        print("Player item exists: \(player?.currentItem != nil)")
+        print("Player item status: \(player?.currentItem?.status.rawValue ?? -1)")
+        isPlaying = true  // Set state before playing
         player?.play()
     }
     
     /// Pauses video playback
     func pause() {
         print("⏸️ Pausing video in cell \(cellId)")
+        print("Player exists: \(player != nil)")
+        print("Player item exists: \(player?.currentItem != nil)")
+        print("Player item status: \(player?.currentItem?.status.rawValue ?? -1)")
+        isPlaying = false  // Set state before pausing
         player?.pause()
     }
     
@@ -580,6 +620,7 @@ class FullScreenVideoCell: UICollectionViewCell {
         
         // Clear current video
         currentVideo = nil
+        isPlaying = false
         
         // Clean up UI
         creatorAvatarButton.subviews.forEach { $0.removeFromSuperview() }
