@@ -155,7 +155,25 @@ class FullScreenVideoCell: UICollectionViewCell {
         let slider = UISlider()
         slider.minimumTrackTintColor = .white
         slider.maximumTrackTintColor = .gray.withAlphaComponent(0.5)
-        slider.setThumbImage(UIImage(), for: .normal) // Hide thumb for cleaner look
+        
+        // Create a small white dot for the thumb
+        let thumbSize: CGFloat = 12
+        let thumbView = UIView(frame: CGRect(x: 0, y: 0, width: thumbSize, height: thumbSize))
+        thumbView.backgroundColor = .white
+        thumbView.layer.cornerRadius = thumbSize / 2
+        
+        // Convert the view to an image
+        UIGraphicsBeginImageContextWithOptions(thumbView.bounds.size, false, 0.0)
+        if let context = UIGraphicsGetCurrentContext() {
+            thumbView.layer.render(in: context)
+            let thumbImage = UIGraphicsGetImageFromCurrentImageContext()
+            UIGraphicsEndImageContext()
+            
+            // Set the thumb image but make it initially invisible
+            slider.setThumbImage(thumbImage, for: .normal)
+            slider.thumbTintColor = .clear
+        }
+        
         slider.translatesAutoresizingMaskIntoConstraints = false
         return slider
     }()
@@ -844,6 +862,21 @@ class FullScreenVideoCell: UICollectionViewCell {
     @objc private func sliderTouchBegan(_ slider: UISlider) {
         // Pause video while scrubbing
         player?.pause()
+        
+        // Animate slider to be more prominent during interaction
+        UIView.animate(withDuration: 0.2) {
+            // Make thumb visible
+            slider.thumbTintColor = .white
+            
+            // Add glow effect
+            slider.layer.shadowColor = UIColor.white.cgColor
+            slider.layer.shadowOffset = .zero
+            slider.layer.shadowRadius = 4
+            slider.layer.shadowOpacity = 0.5
+            
+            // Make the track slightly taller
+            slider.transform = CGAffineTransform(scaleX: 1.0, y: 2.0)
+        }
     }
     
     /// Handles the end of user interaction with the slider
@@ -851,6 +884,18 @@ class FullScreenVideoCell: UICollectionViewCell {
         // Resume playback if video was playing
         if isPlaying {
             player?.play()
+        }
+        
+        // Animate slider back to normal
+        UIView.animate(withDuration: 0.2) {
+            // Hide thumb
+            slider.thumbTintColor = .clear
+            
+            // Remove glow
+            slider.layer.shadowOpacity = 0
+            
+            // Reset track height
+            slider.transform = .identity
         }
     }
 }
