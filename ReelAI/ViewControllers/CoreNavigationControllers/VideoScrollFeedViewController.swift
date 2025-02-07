@@ -16,6 +16,10 @@ class VideoScrollFeedViewController: UIViewController {
     private var videos: [Video]
     private var startingIndex: Int
     private var currentlyPlayingCell: FullScreenVideoCell?
+    private var prefetchedAssets: [String: AVURLAsset] = [:]
+    private var loadingWindow: VideoLoadingWindow?
+    private var lastCleanupTime: Date = Date()
+    private let cleanupInterval: TimeInterval = 2.0
     
     // MARK: - UI Components
     private let collectionView: UICollectionView = {
@@ -73,6 +77,20 @@ class VideoScrollFeedViewController: UIViewController {
         currentlyPlayingCell?.pause()
     }
     
+    override func viewDidLayoutSubviews() {
+        super.viewDidLayoutSubviews()
+        
+        // Ensure the first video plays when the view appears
+        if currentlyPlayingCell == nil,
+           let firstVisibleIndexPath = collectionView.indexPathsForVisibleItems.first,
+           let firstCell = collectionView.cellForItem(at: firstVisibleIndexPath) as? FullScreenVideoCell {
+            print("\n▶️ Playing first visible video at index \(firstVisibleIndexPath.item)")
+            currentlyPlayingCell?.pause()
+            firstCell.restart()
+            currentlyPlayingCell = firstCell
+        }
+    }
+    
     // MARK: - Setup
     private func setupUI() {
         view.backgroundColor = .black
@@ -104,60 +122,209 @@ class VideoScrollFeedViewController: UIViewController {
     private func setupCollectionView() {
         collectionView.delegate = self
         collectionView.dataSource = self
+        collectionView.prefetchDataSource = self
         collectionView.register(FullScreenVideoCell.self, forCellWithReuseIdentifier: FullScreenVideoCell.identifier)
     }
     
+    @objc private func handleClose() {
+        dismiss(animated: true)
+    }
+    
+    // MARK: - Video Management
     private func configureVideoCell(at indexPath: IndexPath) {
-        guard let cell = collectionView.cellForItem(at: indexPath) as? FullScreenVideoCell else { return }
+        guard indexPath.item < videos.count else { return }
         
-        currentlyPlayingCell?.pause()
-        cell.play()
-        currentlyPlayingCell = cell
+        let video = videos[indexPath.item]
+        guard let videoURL = URL(string: video.storagePath) else {
+            print("❌ Invalid video URL for video: \(video.id)")
+            return
+        }
         
-        // Track video view
-        if indexPath.item < videos.count {
-            trackVideoView(videos[indexPath.item])
+        print("\n🎬 Configuring video cell at index \(indexPath.item)")
+        
+        if let existingCell = collectionView.cellForItem(at: indexPath) as? FullScreenVideoCell {
+            print("✅ Found existing cell, configuring directly")
+            existingCell.configure(with: video)
+            
+            let visibleRect = CGRect(origin: collectionView.contentOffset, size: collectionView.bounds.size)
+            let cellRect = collectionView.layoutAttributesForItem(at: indexPath)?.frame ?? .zero
+            if visibleRect.intersects(cellRect) {
+                print("▶️ Cell is visible, playing video")
+                currentlyPlayingCell?.pause()
+                existingCell.restart()
+                currentlyPlayingCell = existingCell
+                
+                // Track video view
+                trackVideoView(video)
+                
+                // Prefetch adjacent videos
+                prefetchAdjacentVideos(for: indexPath.item)
+            }
+        } else {
+            print("⏳ Cell not available yet, will configure in cellForItemAt")
+        }
+    }
+    
+    private func prefetchAdjacentVideos(for currentIndex: Int) {
+        print("\n🔄 Prefetching adjacent videos for index: \(currentIndex)")
+        
+        let indicesToPrefetch = [
+            max(0, currentIndex - 1),
+            min(videos.count - 1, currentIndex + 1)
+        ]
+        
+        for index in indicesToPrefetch where index != currentIndex {
+            guard index >= 0 && index < videos.count else { continue }
+            
+            let video = videos[index]
+            guard let videoURL = URL(string: video.storagePath) else {
+                print("❌ Invalid URL for video at index \(index)")
+                continue
+            }
+            
+            if prefetchedAssets[video.id] != nil {
+                print("✅ Video \(video.id) already prefetched")
+                continue
+            }
+            
+            print("🔄 Starting prefetch for video \(video.id) at index \(index)")
+            
+            let asset = AVURLAsset(url: videoURL, options: [
+                "AVURLAssetOutOfBandMIMETypeKey": "video/mp4",
+                "AVURLAssetPreferPreciseDurationAndTimingKey": true
+            ])
+            
+            let keys = ["playable", "duration"]
+            asset.loadValuesAsynchronously(forKeys: keys) { [weak self] in
+                guard let self = self else { return }
+                
+                var error: NSError?
+                let status = asset.statusOfValue(forKey: "playable", error: &error)
+                
+                if status == .loaded {
+                    print("✅ Successfully prefetched video \(video.id)")
+                    self.prefetchedAssets[video.id] = asset
+                    VideoCache.shared.cacheAsset(asset, forKey: videoURL.absoluteString)
+                } else {
+                    print("❌ Failed to prefetch video \(video.id): \(error?.localizedDescription ?? "Unknown error")")
+                }
+            }
+        }
+    }
+    
+    private func cancelPrefetch(for indices: [Int]) {
+        indices.forEach { index in
+            guard index >= 0 && index < videos.count else { return }
+            let video = videos[index]
+            prefetchedAssets.removeValue(forKey: video.id)
+        }
+    }
+    
+    private func updateLoadingWindow() {
+        guard let currentIndex = getCurrentIndex() else { return }
+        loadingWindow = VideoLoadingWindow(centerIndex: currentIndex)
+        
+        let now = Date()
+        if now.timeIntervalSince(lastCleanupTime) >= cleanupInterval {
+            deloadDistantVideos()
+            lastCleanupTime = now
+        }
+    }
+    
+    private func getCurrentIndex() -> Int? {
+        let visibleRect = CGRect(origin: collectionView.contentOffset, size: collectionView.bounds.size)
+        let visiblePoint = CGPoint(x: visibleRect.midX, y: visibleRect.midY)
+        return collectionView.indexPathForItem(at: visiblePoint)?.item
+    }
+    
+    private func deloadDistantVideos() {
+        guard let window = loadingWindow else { return }
+        
+        let assetsToRemove = prefetchedAssets.filter { videoId, _ in
+            guard let index = videos.firstIndex(where: { $0.id == videoId }) else { return true }
+            return !window.shouldKeepLoaded(index: index, totalCount: videos.count)
+        }
+        
+        assetsToRemove.forEach { videoId, _ in
+            prefetchedAssets.removeValue(forKey: videoId)
+            print("🗑️ Deloaded video asset: \(videoId)")
+        }
+        
+        for cell in collectionView.visibleCells {
+            guard let videoCell = cell as? FullScreenVideoCell,
+                  let video = videoCell.currentVideo,
+                  let index = videos.firstIndex(where: { $0.id == video.id }),
+                  !window.shouldKeepLoaded(index: index, totalCount: videos.count) else {
+                continue
+            }
+            
+            videoCell.prepareForReuse()
+            print("🧹 Cleaned up distant cell for video: \(video.id)")
         }
     }
     
     private func trackVideoView(_ video: Video) {
-        guard let currentUserId = Auth.auth().currentUser?.uid else { return }
+        guard let currentUserId = Auth.auth().currentUser?.uid else {
+            print("❌ Cannot track video view: No current user")
+            return
+        }
+        
+        print("\n📊 Starting to track view for video: \(video.id)")
+        print("👤 Current user: \(currentUserId)")
         
         let db = Firestore.firestore()
         let videoRef = db.collection("videos").document(video.id)
-        let viewedRef = db.collection("viewed_videos").document("\(video.id)_\(currentUserId)")
+        let viewRef = db.collection("video_views").document("\(video.id)_\(currentUserId)")
         
-        // Increment view count using FieldValue.increment
-        videoRef.setData([
-            "views_count": FieldValue.increment(Int64(1))
-        ], merge: true)
+        print("🔍 Checking for existing view record at path: video_views/\(video.id)_\(currentUserId)")
         
-        // Check if this is a first view for watch history
-        viewedRef.getDocument { snapshot, error in
+        viewRef.getDocument { [weak self] snapshot, error in
             if let error = error {
                 print("❌ Error checking view history: \(error.localizedDescription)")
                 return
             }
             
-            // If this is the first view, add to watch history
+            print("📝 View record exists: \(snapshot?.exists == true)")
+            
+            let batch = db.batch()
+            print("🔄 Creating batch operation")
+            
+            print("➕ Adding views_count increment to batch")
+            batch.setData([
+                "views_count": FieldValue.increment(Int64(1))
+            ], forDocument: videoRef, merge: true)
+            
+            let now = FieldValue.serverTimestamp()
+            
             if snapshot?.exists != true {
-                viewedRef.setData([
+                print("📌 First view - creating new view record")
+                batch.setData([
                     "video_id": video.id,
                     "user_id": currentUserId,
-                    "first_viewed": FieldValue.serverTimestamp(),
-                    "last_viewed": FieldValue.serverTimestamp()
-                ])
+                    "first_viewed": now,
+                    "last_viewed": now,
+                    "created_at": now
+                ], forDocument: viewRef)
             } else {
-                // Update last_viewed timestamp for existing entry
-                viewedRef.updateData([
-                    "last_viewed": FieldValue.serverTimestamp()
-                ])
+                print("🔄 Existing view - updating last_viewed timestamp")
+                batch.updateData([
+                    "last_viewed": now
+                ], forDocument: viewRef)
+            }
+            
+            print("💾 Committing batch operation")
+            batch.commit { error in
+                if let error = error {
+                    print("❌ Error tracking video view: \(error.localizedDescription)")
+                    print("Error details: \(error)")
+                } else {
+                    print("✅ Successfully tracked video view")
+                    print("   - Video: \(video.id)")
+                    print("   - User: \(currentUserId)")
+                    print("   - Operation: \(snapshot?.exists == true ? "Updated existing record" : "Created new record")")
+                }
             }
         }
-    }
-    
-    @objc private func handleClose() {
-        dismiss(animated: true)
     }
 }
 
@@ -168,9 +335,22 @@ extension VideoScrollFeedViewController: UICollectionViewDataSource, UICollectio
     }
     
     func collectionView(_ collectionView: UICollectionView, cellForItemAt indexPath: IndexPath) -> UICollectionViewCell {
-        let cell = collectionView.dequeueReusableCell(withReuseIdentifier: FullScreenVideoCell.identifier, for: indexPath) as! FullScreenVideoCell
+        guard let cell = collectionView.dequeueReusableCell(withReuseIdentifier: FullScreenVideoCell.identifier, for: indexPath) as? FullScreenVideoCell else {
+            return UICollectionViewCell()
+        }
         cell.delegate = self
         cell.configure(with: videos[indexPath.item])
+        
+        // Auto-play if this is the starting index
+        if indexPath.item == startingIndex {
+            currentlyPlayingCell?.pause()
+            cell.play()
+            currentlyPlayingCell = cell
+            
+            // Track video view
+            trackVideoView(videos[indexPath.item])
+        }
+        
         return cell
     }
     
@@ -184,55 +364,100 @@ extension VideoScrollFeedViewController: UICollectionViewDataSource, UICollectio
         
         if let indexPath = collectionView.indexPathForItem(at: visiblePoint) {
             configureVideoCell(at: indexPath)
+            updateLoadingWindow()
         }
+    }
+}
+
+// MARK: - UICollectionView Prefetching
+extension VideoScrollFeedViewController: UICollectionViewDataSourcePrefetching {
+    func collectionView(_ collectionView: UICollectionView, prefetchItemsAt indexPaths: [IndexPath]) {
+        guard let window = loadingWindow else { return }
+        
+        let indexPathsInWindow = indexPaths.filter {
+            window.shouldKeepLoaded(index: $0.item, totalCount: videos.count)
+        }
+        
+        print("\n🔄 Prefetching items within window: \(indexPathsInWindow.map { $0.item })")
+        
+        for indexPath in indexPathsInWindow {
+            guard indexPath.item < videos.count else { continue }
+            let video = videos[indexPath.item]
+            
+            guard let videoURL = URL(string: video.storagePath) else { continue }
+            
+            if prefetchedAssets[video.id] != nil { continue }
+            
+            let asset = AVURLAsset(url: videoURL, options: [
+                "AVURLAssetOutOfBandMIMETypeKey": "video/mp4",
+                "AVURLAssetPreferPreciseDurationAndTimingKey": true
+            ])
+            
+            let keys = ["playable", "duration"]
+            asset.loadValuesAsynchronously(forKeys: keys) { [weak self] in
+                guard let self = self else { return }
+                
+                var error: NSError?
+                let status = asset.statusOfValue(forKey: "playable", error: &error)
+                
+                if status == .loaded {
+                    self.prefetchedAssets[video.id] = asset
+                    VideoCache.shared.cacheAsset(asset, forKey: videoURL.absoluteString)
+                }
+            }
+        }
+    }
+    
+    func collectionView(_ collectionView: UICollectionView, cancelPrefetchingForItemsAt indexPaths: [IndexPath]) {
+        print("\n❌ Cancelling prefetch for indices: \(indexPaths.map { $0.item })")
+        cancelPrefetch(for: indexPaths.map { $0.item })
     }
 }
 
 // MARK: - FullScreenVideoCellDelegate
 extension VideoScrollFeedViewController: FullScreenVideoCellDelegate {
     func didTapCreatorAvatar(for video: Video) {
-        let profileVC = PublicProfileViewController()
-        profileVC.userId = video.creatorId
-        navigationController?.pushViewController(profileVC, animated: true)
+        // No-op: Avatar should not be clickable in feed view
     }
     
     func didTapLike(for video: Video) {
         guard let currentUserId = Auth.auth().currentUser?.uid else { return }
         
-        // Find the cell and update UI optimistically
         if let visibleCell = findVisibleCell(for: video) {
             let isCurrentlyLiked = video.isLikedByCurrentUser
             let newLikeState = !isCurrentlyLiked
             
-            // Update UI optimistically
             video.updateLikeStatus(isLiked: newLikeState)
             visibleCell.updateUI(with: video)
             
-            // Update Firebase in background
             let db = Firestore.firestore()
+            let batch = db.batch()
             let likeRef = db.collection("video_likes").document("\(video.id)_\(currentUserId)")
+            let videoRef = db.collection("videos").document(video.id)
             
             if newLikeState {
-                likeRef.setData([
+                batch.setData([
                     "video_id": video.id,
                     "user_id": currentUserId,
                     "created_at": FieldValue.serverTimestamp()
-                ]) { [weak self] error in
-                    if let error = error {
-                        // Revert on error
-                        print("❌ Error liking video: \(error.localizedDescription)")
-                        video.updateLikeStatus(isLiked: isCurrentlyLiked)
-                        visibleCell.updateUI(with: video)
-                    }
-                }
+                ], forDocument: likeRef)
+                
+                batch.updateData([
+                    "likes_count": FieldValue.increment(Int64(1))
+                ], forDocument: videoRef)
             } else {
-                likeRef.delete { [weak self] error in
-                    if let error = error {
-                        // Revert on error
-                        print("❌ Error unliking video: \(error.localizedDescription)")
-                        video.updateLikeStatus(isLiked: isCurrentlyLiked)
-                        visibleCell.updateUI(with: video)
-                    }
+                batch.deleteDocument(likeRef)
+                
+                batch.updateData([
+                    "likes_count": FieldValue.increment(Int64(-1))
+                ], forDocument: videoRef)
+            }
+            
+            batch.commit { [weak self] error in
+                if let error = error {
+                    print("❌ Error updating like status: \(error.localizedDescription)")
+                    video.updateLikeStatus(isLiked: isCurrentlyLiked)
+                    visibleCell.updateUI(with: video)
                 }
             }
         }
@@ -253,7 +478,6 @@ extension VideoScrollFeedViewController: FullScreenVideoCellDelegate {
         commentsVC.videoId = video.id
         commentsVC.modalPresentationStyle = .overFullScreen
         
-        // Handle comment count updates optimistically
         commentsVC.onCommentAdded = { [weak self] in
             video.updateCommentCount(delta: 1)
             if let cell = self?.findVisibleCell(for: video) {
@@ -274,40 +498,41 @@ extension VideoScrollFeedViewController: FullScreenVideoCellDelegate {
     func didTapBookmark(for video: Video) {
         guard let currentUserId = Auth.auth().currentUser?.uid else { return }
         
-        // Find the cell and update UI optimistically
         if let visibleCell = findVisibleCell(for: video) {
             let isCurrentlyBookmarked = video.isBookmarkedByCurrentUser
             let newBookmarkState = !isCurrentlyBookmarked
             
-            // Update UI optimistically
             video.updateBookmarkStatus(isBookmarked: newBookmarkState)
             visibleCell.updateUI(with: video)
             
-            // Update Firebase in background
             let db = Firestore.firestore()
+            let batch = db.batch()
             let bookmarkRef = db.collection("video_bookmarks").document("\(video.id)_\(currentUserId)")
+            let videoRef = db.collection("videos").document(video.id)
             
             if newBookmarkState {
-                bookmarkRef.setData([
+                batch.setData([
                     "video_id": video.id,
                     "user_id": currentUserId,
                     "created_at": FieldValue.serverTimestamp()
-                ]) { [weak self] error in
-                    if let error = error {
-                        // Revert on error
-                        print("❌ Error bookmarking video: \(error.localizedDescription)")
-                        video.updateBookmarkStatus(isBookmarked: isCurrentlyBookmarked)
-                        visibleCell.updateUI(with: video)
-                    }
-                }
+                ], forDocument: bookmarkRef)
+                
+                batch.updateData([
+                    "bookmarks_count": FieldValue.increment(Int64(1))
+                ], forDocument: videoRef)
             } else {
-                bookmarkRef.delete { [weak self] error in
-                    if let error = error {
-                        // Revert on error
-                        print("❌ Error unbookmarking video: \(error.localizedDescription)")
-                        video.updateBookmarkStatus(isBookmarked: isCurrentlyBookmarked)
-                        visibleCell.updateUI(with: video)
-                    }
+                batch.deleteDocument(bookmarkRef)
+                
+                batch.updateData([
+                    "bookmarks_count": FieldValue.increment(Int64(-1))
+                ], forDocument: videoRef)
+            }
+            
+            batch.commit { [weak self] error in
+                if let error = error {
+                    print("❌ Error updating bookmark status: \(error.localizedDescription)")
+                    video.updateBookmarkStatus(isBookmarked: isCurrentlyBookmarked)
+                    visibleCell.updateUI(with: video)
                 }
             }
         }
