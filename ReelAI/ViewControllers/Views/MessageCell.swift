@@ -7,7 +7,7 @@ class MessageCell: UICollectionViewCell {
     // MARK: - UI Components
     private let bubbleView: UIView = {
         let view = UIView()
-        view.layer.cornerRadius = 16
+        view.layer.cornerRadius = 18
         view.translatesAutoresizingMaskIntoConstraints = false
         return view
     }()
@@ -22,7 +22,7 @@ class MessageCell: UICollectionViewCell {
     
     private let timestampLabel: UILabel = {
         let label = UILabel()
-        label.font = .systemFont(ofSize: 12)
+        label.font = .systemFont(ofSize: 11)
         label.textColor = .secondaryLabel
         label.translatesAutoresizingMaskIntoConstraints = false
         return label
@@ -49,11 +49,11 @@ class MessageCell: UICollectionViewCell {
         contentView.addSubview(timestampLabel)
         
         // Create constraints but don't activate them yet
-        leadingConstraint = bubbleView.leadingAnchor.constraint(equalTo: contentView.leadingAnchor, constant: 12)
-        trailingConstraint = bubbleView.trailingAnchor.constraint(equalTo: contentView.trailingAnchor, constant: -12)
+        leadingConstraint = bubbleView.leadingAnchor.constraint(equalTo: contentView.leadingAnchor, constant: 16)
+        trailingConstraint = bubbleView.trailingAnchor.constraint(equalTo: contentView.trailingAnchor, constant: -16)
         
         NSLayoutConstraint.activate([
-            bubbleView.topAnchor.constraint(equalTo: contentView.topAnchor, constant: 4),
+            bubbleView.topAnchor.constraint(equalTo: contentView.topAnchor),
             bubbleView.widthAnchor.constraint(lessThanOrEqualTo: contentView.widthAnchor, multiplier: 0.75),
             
             messageLabel.topAnchor.constraint(equalTo: bubbleView.topAnchor, constant: 8),
@@ -88,12 +88,14 @@ class MessageCell: UICollectionViewCell {
             bubbleView.backgroundColor = .systemBlue
             messageLabel.textColor = .white
             timestampLabel.textAlignment = .right
+            timestampLabel.trailingAnchor.constraint(equalTo: bubbleView.trailingAnchor).isActive = true
         } else {
             // Received message (left side)
             leadingConstraint.isActive = true
-            bubbleView.backgroundColor = .systemGray5
+            bubbleView.backgroundColor = .tertiarySystemFill
             messageLabel.textColor = .label
             timestampLabel.textAlignment = .left
+            timestampLabel.leadingAnchor.constraint(equalTo: bubbleView.leadingAnchor).isActive = true
         }
     }
     

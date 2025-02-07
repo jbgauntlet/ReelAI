@@ -8,13 +8,62 @@ class ChatViewController: UIViewController {
     private let conversation: Conversation
     private var messages: [Message] = []
     private var messagesListener: ListenerRegistration?
-    private var otherUser: User?
     
     // MARK: - UI Components
+    private let customNavigationView: UIView = {
+        let view = UIView()
+        view.backgroundColor = .systemBackground
+        view.translatesAutoresizingMaskIntoConstraints = false
+        return view
+    }()
+    
+    private let backButton: UIButton = {
+        let button = UIButton(type: .system)
+        button.setImage(UIImage(systemName: "chevron.left"), for: .normal)
+        button.tintColor = .label
+        button.translatesAutoresizingMaskIntoConstraints = false
+        return button
+    }()
+    
+    private let avatarImageView: UIImageView = {
+        let iv = UIImageView()
+        iv.contentMode = .scaleAspectFill
+        iv.clipsToBounds = true
+        iv.layer.cornerRadius = 20
+        iv.backgroundColor = .systemGray5
+        iv.translatesAutoresizingMaskIntoConstraints = false
+        return iv
+    }()
+    
+    private let userInfoStackView: UIStackView = {
+        let sv = UIStackView()
+        sv.axis = .vertical
+        sv.spacing = 2
+        sv.alignment = .leading
+        sv.translatesAutoresizingMaskIntoConstraints = false
+        return sv
+    }()
+    
+    private let usernameLabel: UILabel = {
+        let label = UILabel()
+        label.font = .systemFont(ofSize: 16, weight: .semibold)
+        label.textColor = .label
+        return label
+    }()
+    
+    private let statusLabel: UILabel = {
+        let label = UILabel()
+        label.font = .systemFont(ofSize: 12)
+        label.textColor = .secondaryLabel
+        return label
+    }()
+    
     private let collectionView: UICollectionView = {
         let layout = UICollectionViewFlowLayout()
         layout.scrollDirection = .vertical
         layout.minimumLineSpacing = 4
+        layout.minimumInteritemSpacing = 0
+        layout.sectionInset = UIEdgeInsets(top: 8, left: 0, bottom: 8, right: 0)
         
         let cv = UICollectionView(frame: .zero, collectionViewLayout: layout)
         cv.backgroundColor = .systemBackground
@@ -26,7 +75,7 @@ class ChatViewController: UIViewController {
     
     private let messageInputView: UIView = {
         let view = UIView()
-        view.backgroundColor = .systemBackground
+        view.backgroundColor = .systemGroupedBackground
         view.translatesAutoresizingMaskIntoConstraints = false
         return view
     }()
@@ -35,7 +84,7 @@ class ChatViewController: UIViewController {
         let tf = UITextField()
         tf.placeholder = "Message..."
         tf.font = .systemFont(ofSize: 16)
-        tf.backgroundColor = .systemGray6
+        tf.backgroundColor = .systemBackground
         tf.layer.cornerRadius = 20
         tf.leftView = UIView(frame: CGRect(x: 0, y: 0, width: 12, height: 0))
         tf.leftViewMode = .always
@@ -45,28 +94,11 @@ class ChatViewController: UIViewController {
     
     private let sendButton: UIButton = {
         let button = UIButton(type: .system)
-        let config = UIImage.SymbolConfiguration(pointSize: 20, weight: .semibold)
+        let config = UIImage.SymbolConfiguration(pointSize: 24, weight: .semibold)
         button.setImage(UIImage(systemName: "arrow.up.circle.fill", withConfiguration: config), for: .normal)
         button.tintColor = .systemBlue
         button.translatesAutoresizingMaskIntoConstraints = false
         return button
-    }()
-    
-    private let avatarImageView: UIImageView = {
-        let iv = UIImageView()
-        iv.backgroundColor = .systemGray5
-        iv.layer.cornerRadius = 16
-        iv.clipsToBounds = true
-        iv.contentMode = .scaleAspectFill
-        iv.translatesAutoresizingMaskIntoConstraints = false
-        return iv
-    }()
-    
-    private let nameLabel: UILabel = {
-        let label = UILabel()
-        label.font = .systemFont(ofSize: 16, weight: .semibold)
-        label.translatesAutoresizingMaskIntoConstraints = false
-        return label
     }()
     
     // MARK: - Lifecycle
@@ -87,9 +119,21 @@ class ChatViewController: UIViewController {
         listenToMessages()
     }
     
+    deinit {
+        NotificationCenter.default.removeObserver(self)
+    }
+    
     // MARK: - Setup
     private func setupUI() {
         view.backgroundColor = .systemBackground
+        
+        view.addSubview(customNavigationView)
+        customNavigationView.addSubview(backButton)
+        customNavigationView.addSubview(avatarImageView)
+        customNavigationView.addSubview(userInfoStackView)
+        
+        userInfoStackView.addArrangedSubview(usernameLabel)
+        userInfoStackView.addArrangedSubview(statusLabel)
         
         view.addSubview(collectionView)
         view.addSubview(messageInputView)
@@ -97,7 +141,26 @@ class ChatViewController: UIViewController {
         messageInputView.addSubview(sendButton)
         
         NSLayoutConstraint.activate([
-            collectionView.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor),
+            customNavigationView.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor),
+            customNavigationView.leadingAnchor.constraint(equalTo: view.leadingAnchor),
+            customNavigationView.trailingAnchor.constraint(equalTo: view.trailingAnchor),
+            customNavigationView.heightAnchor.constraint(equalToConstant: 60),
+            
+            backButton.leadingAnchor.constraint(equalTo: customNavigationView.leadingAnchor, constant: 8),
+            backButton.centerYAnchor.constraint(equalTo: customNavigationView.centerYAnchor),
+            backButton.widthAnchor.constraint(equalToConstant: 40),
+            backButton.heightAnchor.constraint(equalToConstant: 40),
+            
+            avatarImageView.leadingAnchor.constraint(equalTo: backButton.trailingAnchor, constant: 8),
+            avatarImageView.centerYAnchor.constraint(equalTo: customNavigationView.centerYAnchor),
+            avatarImageView.widthAnchor.constraint(equalToConstant: 40),
+            avatarImageView.heightAnchor.constraint(equalToConstant: 40),
+            
+            userInfoStackView.leadingAnchor.constraint(equalTo: avatarImageView.trailingAnchor, constant: 12),
+            userInfoStackView.centerYAnchor.constraint(equalTo: customNavigationView.centerYAnchor),
+            userInfoStackView.trailingAnchor.constraint(equalTo: customNavigationView.trailingAnchor, constant: -16),
+            
+            collectionView.topAnchor.constraint(equalTo: customNavigationView.bottomAnchor),
             collectionView.leadingAnchor.constraint(equalTo: view.leadingAnchor),
             collectionView.trailingAnchor.constraint(equalTo: view.trailingAnchor),
             collectionView.bottomAnchor.constraint(equalTo: messageInputView.topAnchor),
@@ -107,7 +170,7 @@ class ChatViewController: UIViewController {
             messageInputView.bottomAnchor.constraint(equalTo: view.safeAreaLayoutGuide.bottomAnchor),
             messageInputView.heightAnchor.constraint(equalToConstant: 60),
             
-            messageTextField.leadingAnchor.constraint(equalTo: messageInputView.leadingAnchor, constant: 12),
+            messageTextField.leadingAnchor.constraint(equalTo: messageInputView.leadingAnchor, constant: 16),
             messageTextField.centerYAnchor.constraint(equalTo: messageInputView.centerYAnchor),
             messageTextField.trailingAnchor.constraint(equalTo: sendButton.leadingAnchor, constant: -8),
             messageTextField.heightAnchor.constraint(equalToConstant: 40),
@@ -137,94 +200,47 @@ class ChatViewController: UIViewController {
         collectionView.register(MessageCell.self, forCellWithReuseIdentifier: MessageCell.identifier)
         
         // Setup actions
-        sendButton.addTarget(self, action: #selector(sendButtonTapped), for: .touchUpInside)
+        backButton.addTarget(self, action: #selector(handleBack), for: .touchUpInside)
+        sendButton.addTarget(self, action: #selector(handleSendButtonTapped), for: .touchUpInside)
     }
     
     private func setupNavigationBar() {
-        // Create custom title view
-        let titleView = UIView()
-        titleView.translatesAutoresizingMaskIntoConstraints = false
+        navigationController?.setNavigationBarHidden(true, animated: false)
         
-        titleView.addSubview(avatarImageView)
-        titleView.addSubview(nameLabel)
-        
-        NSLayoutConstraint.activate([
-            avatarImageView.leadingAnchor.constraint(equalTo: titleView.leadingAnchor),
-            avatarImageView.centerYAnchor.constraint(equalTo: titleView.centerYAnchor),
-            avatarImageView.widthAnchor.constraint(equalToConstant: 32),
-            avatarImageView.heightAnchor.constraint(equalToConstant: 32),
+        // Configure user info
+        if let otherUser = conversation.otherUserInfo {
+            usernameLabel.text = otherUser.username ?? "User"
+            statusLabel.text = "Active now" // You can update this based on user's actual status
             
-            nameLabel.leadingAnchor.constraint(equalTo: avatarImageView.trailingAnchor, constant: 8),
-            nameLabel.trailingAnchor.constraint(equalTo: titleView.trailingAnchor),
-            nameLabel.centerYAnchor.constraint(equalTo: titleView.centerYAnchor)
-        ])
-        
-        navigationItem.titleView = titleView
-        navigationController?.navigationBar.prefersLargeTitles = false
-        
-        // Fetch other user's information
-        fetchOtherUserInfo()
-    }
-    
-    private func fetchOtherUserInfo() {
-        guard let currentUserId = Auth.auth().currentUser?.uid else { return }
-        
-        // Find the other user's ID from participants
-        let otherUserId = conversation.participants.first { $0 != currentUserId } ?? ""
-        
-        let db = Firestore.firestore()
-        db.collection("users").document(otherUserId).getDocument { [weak self] snapshot, error in
-            guard let self = self,
-                  let data = snapshot?.data() else { return }
-            
-            // Create user object
-            self.otherUser = User(from: data, uid: otherUserId)
-            
-            // Update UI
-            DispatchQueue.main.async {
-                self.nameLabel.text = self.otherUser?.username
-                
-                if let username = self.otherUser?.username {
-                    if let avatarUrl = self.otherUser?.avatar,
-                       let url = URL(string: avatarUrl) {
-                        // Load avatar image
-                        URLSession.shared.dataTask(with: url) { [weak self] data, response, error in
-                            if let data = data,
-                               let image = UIImage(data: data) {
-                                DispatchQueue.main.async {
-                                    self?.avatarImageView.image = image
-                                }
-                            } else {
-                                DispatchQueue.main.async {
-                                    self?.setupDefaultAvatar(with: username)
-                                }
-                            }
-                        }.resume()
+            if let avatarUrl = otherUser.avatar,
+               let url = URL(string: avatarUrl) {
+                URLSession.shared.dataTask(with: url) { [weak self] data, response, error in
+                    if let data = data, let image = UIImage(data: data) {
+                        DispatchQueue.main.async {
+                            self?.avatarImageView.image = image
+                        }
                     } else {
-                        self.setupDefaultAvatar(with: username)
+                        DispatchQueue.main.async {
+                            self?.setupDefaultAvatar(with: otherUser.username ?? "U")
+                        }
                     }
-                }
+                }.resume()
+            } else {
+                setupDefaultAvatar(with: otherUser.username ?? "U")
             }
         }
     }
     
     private func setupDefaultAvatar(with username: String) {
-        // Clear any existing content
-        avatarImageView.image = nil
-        avatarImageView.subviews.forEach { $0.removeFromSuperview() }
-        
         let firstChar = String(username.prefix(1)).uppercased()
-        
-        // Generate color based on username
         let hue = CGFloat(username.hashValue) / CGFloat(Int.max)
         let color = UIColor(hue: hue, saturation: 0.5, brightness: 0.8, alpha: 1.0)
         
         avatarImageView.backgroundColor = color
         
-        // Create label for initial
         let label = UILabel()
         label.text = firstChar
-        label.font = .systemFont(ofSize: 14, weight: .medium)
+        label.font = .systemFont(ofSize: 16, weight: .medium)
         label.textColor = .white
         label.translatesAutoresizingMaskIntoConstraints = false
         
@@ -252,7 +268,11 @@ class ChatViewController: UIViewController {
     }
     
     // MARK: - Actions
-    @objc private func sendButtonTapped() {
+    @objc private func handleBack() {
+        navigationController?.popViewController(animated: true)
+    }
+    
+    @objc private func handleSendButtonTapped() {
         guard let messageText = messageTextField.text?.trimmingCharacters(in: .whitespacesAndNewlines),
               !messageText.isEmpty,
               let currentUserId = Auth.auth().currentUser?.uid else {
@@ -367,8 +387,23 @@ extension ChatViewController: UICollectionViewDataSource, UICollectionViewDelega
     func collectionView(_ collectionView: UICollectionView, layout collectionViewLayout: UICollectionViewLayout, sizeForItemAt indexPath: IndexPath) -> CGSize {
         let message = messages[indexPath.item]
         let width = collectionView.bounds.width
-        let estimatedHeight: CGFloat = 40
         
-        return CGSize(width: width, height: estimatedHeight)
+        // Calculate height based on message text
+        let maxWidth = width * 0.75 - 24 // 75% of width minus padding
+        let font = UIFont.systemFont(ofSize: 16)
+        let messageText = message.text
+        
+        let constraintRect = CGSize(width: maxWidth, height: .greatestFiniteMagnitude)
+        let boundingBox = messageText.boundingRect(
+            with: constraintRect,
+            options: [.usesLineFragmentOrigin, .usesFontLeading],
+            attributes: [.font: font],
+            context: nil
+        )
+        
+        let messageHeight = ceil(boundingBox.height) + 16 // Add padding
+        let totalHeight = messageHeight + 24 // Add space for timestamp
+        
+        return CGSize(width: width, height: totalHeight)
     }
 } 
