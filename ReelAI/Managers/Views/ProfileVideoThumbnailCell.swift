@@ -114,7 +114,7 @@ class ProfileVideoThumbnailCell: UICollectionViewCell {
         
         // Get video thumbnail using only video ID
         let storage = Storage.storage()
-        let thumbnailPath = "thumbnails/\(video.id).png"
+        let thumbnailPath = "thumbnails/\(video.id).jpg"
         let thumbnailRef = storage.reference().child(thumbnailPath)
         
         // First try to get thumbnail
@@ -203,19 +203,19 @@ class ProfileVideoThumbnailCell: UICollectionViewCell {
         image.draw(in: rect)
         
         guard let resizedImage = UIGraphicsGetImageFromCurrentImageContext(),
-              let data = resizedImage.pngData() else {
+              let data = resizedImage.jpegData(compressionQuality: 1.0) else {
             print("❌ Failed to create thumbnail data")
             return
         }
         
-        // Use simplified path structure: thumbnails/{videoId}.png
+        // Use simplified path structure: thumbnails/{videoId}.jpg
         let storage = Storage.storage()
-        let thumbnailPath = "thumbnails/\(video.id).png"
+        let thumbnailPath = "thumbnails/\(video.id).jpg"
         let thumbnailRef = storage.reference().child(thumbnailPath)
         
         // Add metadata
         let metadata = StorageMetadata()
-        metadata.contentType = "image/png"
+        metadata.contentType = "image/jpeg"
         
         print("📝 Attempting to save thumbnail:")
         print("   Path: \(thumbnailPath)")
