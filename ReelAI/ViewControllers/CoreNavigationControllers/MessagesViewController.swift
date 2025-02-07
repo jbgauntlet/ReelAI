@@ -13,8 +13,10 @@ class MessagesViewController: UIViewController {
     
     // MARK: - Properties
     private var conversations: [Conversation] = []
+    private var filteredConversations: [Conversation] = []
     private var conversationsListener: ListenerRegistration?
     private let transition = HorizontalCoverTransition()
+    private var isSearching: Bool = false
     
     // MARK: - UI Components
     private let titleLabel: UILabel = {
@@ -73,6 +75,8 @@ class MessagesViewController: UIViewController {
         view.addSubview(searchBar)
         view.addSubview(tableView)
         view.addSubview(emptyStateLabel)
+        
+        searchBar.delegate = self
         
         NSLayoutConstraint.activate([
             titleLabel.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor, constant: 16),
@@ -152,7 +156,9 @@ class MessagesViewController: UIViewController {
 // MARK: - UITableViewDelegate & DataSource
 extension MessagesViewController: UITableViewDelegate, UITableViewDataSource {
     func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
-        return conversations.count
+        let count = isSearching ? filteredConversations.count : conversations.count
+        emptyStateLabel.isHidden = count > 0
+        return count
     }
     
     func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
@@ -163,7 +169,7 @@ extension MessagesViewController: UITableViewDelegate, UITableViewDataSource {
             return UITableViewCell()
         }
         
-        let conversation = conversations[indexPath.row]
+        let conversation = isSearching ? filteredConversations[indexPath.row] : conversations[indexPath.row]
         cell.configure(with: conversation)
         return cell
     }
@@ -175,7 +181,7 @@ extension MessagesViewController: UITableViewDelegate, UITableViewDataSource {
     func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
         tableView.deselectRow(at: indexPath, animated: true)
         
-        let conversation = conversations[indexPath.row]
+        let conversation = isSearching ? filteredConversations[indexPath.row] : conversations[indexPath.row]
         let chatVC = ChatViewController(conversation: conversation)
         chatVC.modalPresentationStyle = .fullScreen
         chatVC.transitioningDelegate = self
@@ -186,7 +192,38 @@ extension MessagesViewController: UITableViewDelegate, UITableViewDataSource {
 // MARK: - UISearchBarDelegate
 extension MessagesViewController: UISearchBarDelegate {
     func searchBar(_ searchBar: UISearchBar, textDidChange searchText: String) {
-        // TODO: Implement search functionality
+        let query = searchText.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+        isSearching = !query.isEmpty
+        
+        if isSearching {
+            filteredConversations = conversations.filter { conversation in
+                // Check if username contains query
+                let usernameMatch = conversation.otherUserInfo?.username?.lowercased().contains(query) ?? false
+                
+                // Check if last message contains query
+                let messageMatch = conversation.lastMessage?.lowercased().contains(query) ?? false
+                
+                return usernameMatch || messageMatch
+            }
+        }
+        
+        tableView.reloadData()
+    }
+    
+    func searchBarTextDidBeginEditing(_ searchBar: UISearchBar) {
+        searchBar.setShowsCancelButton(true, animated: true)
+    }
+    
+    func searchBarCancelButtonClicked(_ searchBar: UISearchBar) {
+        searchBar.text = ""
+        searchBar.setShowsCancelButton(false, animated: true)
+        searchBar.resignFirstResponder()
+        isSearching = false
+        tableView.reloadData()
+    }
+    
+    func searchBarSearchButtonClicked(_ searchBar: UISearchBar) {
+        searchBar.resignFirstResponder()
     }
 }
 
