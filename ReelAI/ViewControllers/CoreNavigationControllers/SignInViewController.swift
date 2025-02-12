@@ -12,6 +12,25 @@ class SignInViewController: UIViewController, UITextFieldDelegate {
     let togglePasswordButton = UIButton()
     let signInButton = UIButton()
     
+    // Add error label and loading indicator
+    private let errorLabel: UILabel = {
+        let label = UILabel()
+        label.textColor = .systemRed
+        label.font = .systemFont(ofSize: 14)
+        label.numberOfLines = 0
+        label.textAlignment = .center
+        label.isHidden = true
+        label.translatesAutoresizingMaskIntoConstraints = false
+        return label
+    }()
+    
+    private let loadingIndicator: UIActivityIndicatorView = {
+        let indicator = UIActivityIndicatorView(style: .medium)
+        indicator.hidesWhenStopped = true
+        indicator.translatesAutoresizingMaskIntoConstraints = false
+        return indicator
+    }()
+    
     override func viewDidLoad() {
         super.viewDidLoad()
         view.backgroundColor = .white
@@ -67,6 +86,7 @@ class SignInViewController: UIViewController, UITextFieldDelegate {
         emailTextField.layer.cornerRadius = textFieldHeight / 6
         emailTextField.autocorrectionType = .no
         emailTextField.autocapitalizationType = .none
+        emailTextField.delegate = self
         emailTextField.addTarget(self, action: #selector(textFieldDidChange), for: .editingChanged)
         emailTextField.translatesAutoresizingMaskIntoConstraints = false
         contentContainerView.addSubview(emailTextField)
@@ -90,6 +110,7 @@ class SignInViewController: UIViewController, UITextFieldDelegate {
         passwordTextField.backgroundColor = ColorPalette.lightGray
         passwordTextField.layer.cornerRadius = textFieldHeight / 6
         passwordTextField.isSecureTextEntry = true
+        passwordTextField.delegate = self
         passwordTextField.addTarget(self, action: #selector(textFieldDidChange), for: .editingChanged)
         passwordTextField.translatesAutoresizingMaskIntoConstraints = false
         contentContainerView.addSubview(passwordTextField)
@@ -122,6 +143,19 @@ class SignInViewController: UIViewController, UITextFieldDelegate {
             signInButton.heightAnchor.constraint(equalToConstant: buttonHeight),
         ])
         
+        // Add error label and loading indicator
+        contentContainerView.addSubview(errorLabel)
+        contentContainerView.addSubview(loadingIndicator)
+        
+        NSLayoutConstraint.activate([
+            errorLabel.topAnchor.constraint(equalTo: signInButton.bottomAnchor, constant: 8),
+            errorLabel.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: horizontalPadding),
+            errorLabel.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -horizontalPadding),
+            
+            loadingIndicator.centerYAnchor.constraint(equalTo: signInButton.centerYAnchor),
+            loadingIndicator.trailingAnchor.constraint(equalTo: signInButton.trailingAnchor, constant: -16)
+        ])
+        
         let tapOutsideGesture = UITapGestureRecognizer(target: self, action: #selector(dismissKeyboard))
         tapOutsideGesture.cancelsTouchesInView = false
         view.addGestureRecognizer(tapOutsideGesture)
@@ -137,23 +171,22 @@ class SignInViewController: UIViewController, UITextFieldDelegate {
     }
     
     @objc func handleSignInButtonTapped() {
-        guard let email = emailTextField.text else { return }
-        guard let password = passwordTextField.text else { return }
+        guard validateFields() else { return }
         
+        guard let email = emailTextField.text?.trimmingCharacters(in: .whitespacesAndNewlines),
+              let password = passwordTextField.text else { return }
+        
+        setLoading(true)
         signIn(email, password)
     }
     
     func signIn(_ email: String, _ password: String) {
-        signInButton.isEnabled = false
-        
         // Verify Firebase Auth is initialized
         guard Auth.auth() != nil else {
-            print("Firebase Auth is not initialized")
-            signInButton.isEnabled = true
+            showError("Authentication service is not available")
+            setLoading(false)
             return
         }
-        
-        print("Attempting to sign in with email: \(email)")
         
         // Sign in with Firebase Auth
         Auth.auth().signIn(withEmail: email, password: password) { [weak self] authResult, error in
@@ -161,40 +194,41 @@ class SignInViewController: UIViewController, UITextFieldDelegate {
             
             DispatchQueue.main.async {
                 if let error = error as NSError? {
-                    // Detailed error logging
-                    print("Firebase Auth Error Code: \(error.code)")
-                    print("Firebase Auth Error Domain: \(error.domain)")
-                    print("Firebase Auth Error Description: \(error.localizedDescription)")
-                    print("Firebase Auth Error User Info: \(error.userInfo)")
-                    
                     if let authError = AuthErrorCode(rawValue: error.code) {
-                        print("Firebase Auth Error Code Name: \(authError)")
                         switch authError {
                         case .wrongPassword:
-                            print("Wrong password")
+                            self.showError("Incorrect password. Please try again.", textField: self.passwordTextField)
                         case .invalidEmail:
-                            print("Invalid email format")
+                            self.showError("Please enter a valid email address", textField: self.emailTextField)
                         case .userNotFound:
-                            print("User not found")
-                        case .invalidCustomToken:
-                            print("Invalid custom token")
+                            self.showError("We couldn't find an account with this email. Please check your email or sign up.", textField: self.emailTextField)
+                        case .userDisabled:
+                            self.showError("This account has been disabled. Please contact support.")
+                        case .tooManyRequests:
+                            self.showError("Too many sign-in attempts. Please wait a moment and try again.")
+                        case .networkError:
+                            self.showError("Unable to connect. Please check your internet connection and try again.")
+                        case .invalidCredential:
+                            self.showError("Your login information appears to be incorrect. Please try again.", textField: self.emailTextField)
                         case .credentialAlreadyInUse:
-                            print("Credential already in use")
-                        case .operationNotAllowed:
-                            print("Operation not allowed - check if Email/Password sign-in is enabled in Firebase Console")
+                            self.showError("This email is already linked to another account.")
+                        case .requiresRecentLogin:
+                            self.showError("For security reasons, please sign in again.")
+                        case .emailAlreadyInUse:
+                            self.showError("This email is already registered. Please sign in instead of creating a new account.")
                         default:
-                            print("Other Firebase Auth error: \(authError)")
+                            self.showError("Something went wrong. Please try again.")
                         }
+                    } else {
+                        self.showError("Unable to sign in at this time. Please try again later.")
                     }
-                    
-                    // TODO: Show error to user
-                    self.signInButton.isEnabled = true
+                    self.setLoading(false)
                     return
                 }
                 
                 guard let user = authResult?.user else {
-                    print("No user found after successful sign in")
-                    self.signInButton.isEnabled = true
+                    self.showError("An error occurred. Please try again")
+                    self.setLoading(false)
                     return
                 }
                 
@@ -205,15 +239,15 @@ class SignInViewController: UIViewController, UITextFieldDelegate {
                     
                     DispatchQueue.main.async {
                         if let error = error {
-                            print("Firestore Error: \(error.localizedDescription)")
-                            self.signInButton.isEnabled = true
+                            self.showError("Error fetching user data: \(error.localizedDescription)")
+                            self.setLoading(false)
                             return
                         }
                         
                         guard let document = document, document.exists,
                               let userData = document.data() else {
-                            print("User document not found or missing data")
-                            self.signInButton.isEnabled = true
+                            self.showError("User data not found")
+                            self.setLoading(false)
                             return
                         }
                         
@@ -223,30 +257,19 @@ class SignInViewController: UIViewController, UITextFieldDelegate {
                             // Navigate to main screen
                             navigateToControllerAsRootController(self.view.window, MainTabBarController())
                         } else {
-                            print("Error creating user model from data")
-                            self.signInButton.isEnabled = true
+                            self.showError("Error loading user data")
+                            self.setLoading(false)
                         }
                     }
                 }
             }
         }
-        
-        // Keep the old API call as fallback or remove if not needed
-        /* APICaller.shared.sendRequest(LoginRequest(email: email, password: password), "login", .POST, false, LoginResponse.self) { [self] result in
-            DispatchQueue.main.async {
-                switch result {
-                case .success(let response):
-                    let success = GlobalDataManager.shared.handleLoginSuccess(response)
-                    if(success) { navigateToControllerAsRootController(self.view.window, MainTabBarController()) }
-                case .failure(let error):
-                    print(error.localizedDescription)
-                }
-                self.signInButton.isEnabled = true
-            }
-        } */
     }
     
     @objc func textFieldDidChange() {
+        resetFieldErrors()
+        errorLabel.isHidden = true
+        
         var canSubmit = true
         let email = emailTextField.text ?? ""
         let password = passwordTextField.text ?? ""
@@ -262,4 +285,81 @@ class SignInViewController: UIViewController, UITextFieldDelegate {
     @objc private func dismissKeyboard() {
         view.endEditing(true)
     }
+    
+    // MARK: - Validation
+    private func validateFields() -> Bool {
+        // Validate email
+        guard let email = emailTextField.text?.trimmingCharacters(in: .whitespacesAndNewlines),
+              !email.isEmpty else {
+            showError("Please enter your email", textField: emailTextField)
+            return false
+        }
+        
+        if !isValidEmail(email) {
+            showError("Please enter a valid email address", textField: emailTextField)
+            return false
+        }
+        
+        // Validate password
+        guard let password = passwordTextField.text,
+              !password.isEmpty else {
+            showError("Please enter your password", textField: passwordTextField)
+            return false
+        }
+        
+        return true
+    }
+    
+    private func isValidEmail(_ email: String) -> Bool {
+        let emailRegex = "[A-Z0-9a-z._%+-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,64}"
+        let emailPredicate = NSPredicate(format:"SELF MATCHES %@", emailRegex)
+        return emailPredicate.evaluate(with: email)
+    }
+    
+    // MARK: - UI Helpers
+    private func showError(_ message: String, textField: UITextField? = nil) {
+        errorLabel.text = message
+        errorLabel.isHidden = false
+        
+        if let textField = textField {
+            textField.layer.borderColor = UIColor.systemRed.cgColor
+            textField.layer.borderWidth = 1
+        }
+    }
+    
+    private func resetFieldErrors() {
+        [emailTextField, passwordTextField].forEach { textField in
+            textField?.layer.borderWidth = 0
+        }
+    }
+    
+    private func setLoading(_ loading: Bool) {
+        signInButton.isEnabled = !loading
+        if loading {
+            loadingIndicator.startAnimating()
+            signInButton.setTitle("", for: .disabled)
+        } else {
+            loadingIndicator.stopAnimating()
+            signInButton.setTitle("Sign In", for: .normal)
+        }
+    }
 }
+
+// MARK: - UITextFieldDelegate
+extension SignInViewController {
+    func textFieldShouldReturn(_ textField: UITextField) -> Bool {
+        if textField == emailTextField {
+            passwordTextField.becomeFirstResponder()
+        } else {
+            textField.resignFirstResponder()
+            if signInButton.isEnabled {
+                handleSignInButtonTapped()
+            }
+        }
+        return true
+    }
+}
+
+
+
+

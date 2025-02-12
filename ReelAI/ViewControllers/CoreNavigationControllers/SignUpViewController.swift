@@ -18,6 +18,24 @@ class SignUpViewController: UIViewController {
     
     var activeTextField: UITextField?
     
+    private let errorLabel: UILabel = {
+        let label = UILabel()
+        label.textColor = .systemRed
+        label.font = .systemFont(ofSize: 14)
+        label.numberOfLines = 0
+        label.textAlignment = .center
+        label.isHidden = true
+        label.translatesAutoresizingMaskIntoConstraints = false
+        return label
+    }()
+    
+    private let loadingIndicator: UIActivityIndicatorView = {
+        let indicator = UIActivityIndicatorView(style: .medium)
+        indicator.hidesWhenStopped = true
+        indicator.translatesAutoresizingMaskIntoConstraints = false
+        return indicator
+    }()
+    
     override func viewDidLoad() {
         super.viewDidLoad()
         view.backgroundColor = .white
@@ -185,6 +203,18 @@ class SignUpViewController: UIViewController {
             signInButton.heightAnchor.constraint(equalToConstant: buttonHeight),
         ])
         
+        contentContainerView.addSubview(errorLabel)
+        contentContainerView.addSubview(loadingIndicator)
+        
+        NSLayoutConstraint.activate([
+            errorLabel.topAnchor.constraint(equalTo: signUpButton.bottomAnchor, constant: 8),
+            errorLabel.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: horizontalPadding),
+            errorLabel.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -horizontalPadding),
+            
+            loadingIndicator.centerYAnchor.constraint(equalTo: signUpButton.centerYAnchor),
+            loadingIndicator.trailingAnchor.constraint(equalTo: signUpButton.trailingAnchor, constant: -16)
+        ])
+        
         let tapOutsideGesture = UITapGestureRecognizer(target: self, action: #selector(dismissKeyboard))
         tapOutsideGesture.cancelsTouchesInView = false
         view.addGestureRecognizer(tapOutsideGesture)
@@ -208,11 +238,16 @@ class SignUpViewController: UIViewController {
     }
     
     @objc func handleSignUpButtonTapped() {
-        guard let email = emailTextField.text else { return }
-        guard let password = passwordTextField.text else { return }
-        guard let name = nameTextField.text else { return }
-        guard let username = usernameTextField.text else { return }
+        guard validateFields() else { return }
         
+        guard let email = emailTextField.text?.trimmingCharacters(in: .whitespacesAndNewlines),
+              let password = passwordTextField.text,
+              let name = nameTextField.text?.trimmingCharacters(in: .whitespacesAndNewlines),
+              let username = usernameTextField.text?.trimmingCharacters(in: .whitespacesAndNewlines) else {
+            return
+        }
+        
+        setLoading(true)
         signUp(email, password, name, username)
     }
     
@@ -221,41 +256,33 @@ class SignUpViewController: UIViewController {
     }
     
     func signUp(_ email: String, _ password: String, _ name: String, _ username: String) {
-        signUpButton.isEnabled = false
-        
         // Create the user with Firebase Auth
         Auth.auth().createUser(withEmail: email, password: password) { [weak self] authResult, error in
             guard let self = self else { return }
             
             DispatchQueue.main.async {
                 if let error = error as NSError? {
-                    // Detailed error logging
-                    print("Firebase Auth Error Code: \(error.code)")
-                    print("Firebase Auth Error Domain: \(error.domain)")
-                    print("Firebase Auth Error Description: \(error.localizedDescription)")
-                    
                     if let authError = AuthErrorCode(rawValue: error.code) {
-                        print("Firebase Auth Error Code Name: \(authError)")
                         switch authError {
                         case .emailAlreadyInUse:
-                            print("Email is already in use")
+                            self.showError("This email is already registered", textField: self.emailTextField)
                         case .invalidEmail:
-                            print("Invalid email format")
+                            self.showError("Please enter a valid email address", textField: self.emailTextField)
                         case .weakPassword:
-                            print("Password is too weak")
+                            self.showError("Password is too weak. Please use at least 6 characters", textField: self.passwordTextField)
                         default:
-                            print("Other Firebase Auth error")
+                            self.showError("Error: \(error.localizedDescription)")
                         }
+                    } else {
+                        self.showError("An error occurred. Please try again")
                     }
-                    
-                    // TODO: Show error to user
-                    self.signUpButton.isEnabled = true
+                    self.setLoading(false)
                     return
                 }
                 
                 guard let user = authResult?.user else {
-                    print("No user found after successful creation")
-                    self.signUpButton.isEnabled = true
+                    self.showError("An error occurred. Please try again")
+                    self.setLoading(false)
                     return
                 }
                 
@@ -285,12 +312,13 @@ class SignUpViewController: UIViewController {
                 ]
                 
                 let db = Firestore.firestore()
-                db.collection("users").document(user.uid).setData(userData) { error in
+                db.collection("users").document(user.uid).setData(userData) { [weak self] error in
+                    guard let self = self else { return }
+                    
                     DispatchQueue.main.async {
                         if let error = error {
-                            print("Firestore Error: \(error.localizedDescription)")
-                            // TODO: Show error to user
-                            self.signUpButton.isEnabled = true
+                            self.showError("Error saving user data: \(error.localizedDescription)")
+                            self.setLoading(false)
                             return
                         }
                         
@@ -309,20 +337,6 @@ class SignUpViewController: UIViewController {
                 }
             }
         }
-        
-        // Keep the old API call as fallback or remove if not needed
-        /* APICaller.shared.sendRequest(SignUpRequest(email: email, password: password, firstname: firstname, lastname: lastname), "register", .POST, false, SignUpResponse.self) { [self] result in
-            DispatchQueue.main.async {
-                switch result {
-                case .success(let response):
-                    let userId = response.user_id!
-                    self.navigationController?.pushViewController(VerifyAccountViewController(userId, email, password, firstname, lastname), animated: true)
-                case .failure(let error):
-                    print(error.localizedDescription)
-                }
-                self.signUpButton.isEnabled = true
-            }
-        } */
     }
     
     @objc func textFieldDidChange() {
@@ -369,6 +383,106 @@ class SignUpViewController: UIViewController {
     
     @objc private func dismissKeyboard() {
         view.endEditing(true)
+    }
+    
+    private func validateFields() -> Bool {
+        // Reset UI state
+        resetFieldErrors()
+        errorLabel.isHidden = true
+        
+        // Validate email
+        guard let email = emailTextField.text?.trimmingCharacters(in: .whitespacesAndNewlines),
+              !email.isEmpty else {
+            showError("Please enter your email", textField: emailTextField)
+            return false
+        }
+        
+        if !isValidEmail(email) {
+            showError("Please enter a valid email address", textField: emailTextField)
+            return false
+        }
+        
+        // Validate password
+        guard let password = passwordTextField.text,
+              !password.isEmpty else {
+            showError("Please enter your password", textField: passwordTextField)
+            return false
+        }
+        
+        if password.count < 6 {
+            showError("Password must be at least 6 characters", textField: passwordTextField)
+            return false
+        }
+        
+        // Validate name
+        guard let name = nameTextField.text?.trimmingCharacters(in: .whitespacesAndNewlines),
+              !name.isEmpty else {
+            showError("Please enter your name", textField: nameTextField)
+            return false
+        }
+        
+        if name.count < 2 {
+            showError("Name must be at least 2 characters", textField: nameTextField)
+            return false
+        }
+        
+        // Validate username
+        guard let username = usernameTextField.text?.trimmingCharacters(in: .whitespacesAndNewlines),
+              !username.isEmpty else {
+            showError("Please enter a username", textField: usernameTextField)
+            return false
+        }
+        
+        if username.count < 3 {
+            showError("Username must be at least 3 characters", textField: usernameTextField)
+            return false
+        }
+        
+        if !isValidUsername(username) {
+            showError("Username can only contain letters, numbers, and underscores", textField: usernameTextField)
+            return false
+        }
+        
+        return true
+    }
+    
+    private func isValidEmail(_ email: String) -> Bool {
+        let emailRegex = "[A-Z0-9a-z._%+-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,64}"
+        let emailPredicate = NSPredicate(format:"SELF MATCHES %@", emailRegex)
+        return emailPredicate.evaluate(with: email)
+    }
+    
+    private func isValidUsername(_ username: String) -> Bool {
+        let usernameRegex = "^[a-zA-Z0-9_]{3,20}$"
+        let usernamePredicate = NSPredicate(format:"SELF MATCHES %@", usernameRegex)
+        return usernamePredicate.evaluate(with: username)
+    }
+    
+    private func showError(_ message: String, textField: UITextField? = nil) {
+        errorLabel.text = message
+        errorLabel.isHidden = false
+        
+        if let textField = textField {
+            textField.layer.borderColor = UIColor.systemRed.cgColor
+            textField.layer.borderWidth = 1
+        }
+    }
+    
+    private func resetFieldErrors() {
+        [emailTextField, passwordTextField, nameTextField, usernameTextField].forEach { textField in
+            textField?.layer.borderWidth = 0
+        }
+    }
+    
+    private func setLoading(_ loading: Bool) {
+        signUpButton.isEnabled = !loading
+        if loading {
+            loadingIndicator.startAnimating()
+            signUpButton.setTitle("", for: .disabled)
+        } else {
+            loadingIndicator.stopAnimating()
+            signUpButton.setTitle("Continue", for: .normal)
+        }
     }
 }
 
