@@ -335,8 +335,10 @@ extension VideoScrollFeedViewController: UICollectionViewDataSource, UICollectio
         guard let cell = collectionView.dequeueReusableCell(withReuseIdentifier: FullScreenVideoCell.identifier, for: indexPath) as? FullScreenVideoCell else {
             return UICollectionViewCell()
         }
+        
+        let video = videos[indexPath.item]
+        cell.configure(with: video)
         cell.delegate = self
-        cell.configure(with: videos[indexPath.item])
         
         // Auto-play if this is the starting index
         if indexPath.item == startingIndex {
@@ -437,8 +439,8 @@ extension VideoScrollFeedViewController: FullScreenVideoCellDelegate {
             
             if newLikeState {
                 batch.setData([
-                    "video_id": video.id,
                     "user_id": currentUserId,
+                    "video_id": video.id,
                     "created_at": FieldValue.serverTimestamp()
                 ], forDocument: likeRef)
                 
@@ -463,36 +465,17 @@ extension VideoScrollFeedViewController: FullScreenVideoCellDelegate {
         }
     }
     
-    private func findVisibleCell(for video: Video) -> FullScreenVideoCell? {
-        for cell in collectionView.visibleCells {
-            if let videoCell = cell as? FullScreenVideoCell,
-               videoCell.currentVideo?.id == video.id {
-                return videoCell
-            }
-        }
-        return nil
-    }
-    
     func didTapComment(for video: Video) {
         let commentsVC = CommentsViewController()
         commentsVC.videoId = video.id
-        commentsVC.modalPresentationStyle = .overFullScreen
+        commentsVC.modalPresentationStyle = .pageSheet
         
-        commentsVC.onCommentAdded = { [weak self] in
-            video.updateCommentCount(delta: 1)
-            if let cell = self?.findVisibleCell(for: video) {
-                cell.updateUI(with: video)
-            }
+        if let sheet = commentsVC.sheetPresentationController {
+            sheet.detents = [.large()]
+            sheet.prefersGrabberVisible = true
         }
         
-        commentsVC.onCommentDeleted = { [weak self] in
-            video.updateCommentCount(delta: -1)
-            if let cell = self?.findVisibleCell(for: video) {
-                cell.updateUI(with: video)
-            }
-        }
-        
-        present(commentsVC, animated: false)
+        present(commentsVC, animated: true)
     }
     
     func didTapBookmark(for video: Video) {
@@ -512,8 +495,8 @@ extension VideoScrollFeedViewController: FullScreenVideoCellDelegate {
             
             if newBookmarkState {
                 batch.setData([
-                    "video_id": video.id,
                     "user_id": currentUserId,
+                    "video_id": video.id,
                     "created_at": FieldValue.serverTimestamp()
                 ], forDocument: bookmarkRef)
                 
@@ -554,5 +537,15 @@ extension VideoScrollFeedViewController: FullScreenVideoCellDelegate {
         let patternVC = PatternDisplayViewController(pattern: pattern, patternJson: patternJson)
         patternVC.modalPresentationStyle = .overFullScreen
         present(patternVC, animated: true)
+    }
+    
+    private func findVisibleCell(for video: Video) -> FullScreenVideoCell? {
+        for cell in collectionView.visibleCells {
+            if let videoCell = cell as? FullScreenVideoCell,
+               videoCell.currentVideo?.id == video.id {
+                return videoCell
+            }
+        }
+        return nil
     }
 }
