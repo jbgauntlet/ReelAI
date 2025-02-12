@@ -5,12 +5,15 @@ import FirebaseFirestore
 class SignInViewController: UIViewController, UITextFieldDelegate {
 
     let backButton = UIButton()
+    let scrollView = UIScrollView()
     let contentContainerView = UIView()
     let signInLabel = UILabel()
     let emailTextField = PaddedTextField(padding: UIEdgeInsets(top: 0, left: 15, bottom: 0, right: 15))
     var passwordTextField = PaddedTextField(padding: UIEdgeInsets(top: 0, left: 15, bottom: 0, right: 45))
     let togglePasswordButton = UIButton()
     let signInButton = UIButton()
+    
+    var activeTextField: UITextField?
     
     // Add error label and loading indicator
     private let errorLabel: UILabel = {
@@ -43,32 +46,51 @@ class SignInViewController: UIViewController, UITextFieldDelegate {
         super.viewDidLoad()
         view.backgroundColor = .white
         
+        // Configure scrollView first
+        scrollView.translatesAutoresizingMaskIntoConstraints = false
+        scrollView.keyboardDismissMode = .interactive
+        scrollView.alwaysBounceVertical = true
+        view.addSubview(scrollView)
+        
         let textFieldHeight = 60.0
         let verticalPadding = 30.0
         let horizontalPadding = 30.0
         let buttonHeight = textFieldHeight
         let labelHeight = 35.0
         
-        let contentContainerHeight = 5 * textFieldHeight + 4 * verticalPadding + labelHeight
-        contentContainerView.translatesAutoresizingMaskIntoConstraints = false
-        view.addSubview(contentContainerView)
-        NSLayoutConstraint.activate([
-            contentContainerView.heightAnchor.constraint(equalToConstant: contentContainerHeight),
-            contentContainerView.centerYAnchor.constraint(equalTo: view.safeAreaLayoutGuide.centerYAnchor),
-            contentContainerView.leadingAnchor.constraint(equalTo: view.leadingAnchor),
-            contentContainerView.trailingAnchor.constraint(equalTo: view.trailingAnchor),
-        ])
-        
-        let backButtonImage = UIImage(systemName: "arrow.left")?.resizeWithHeight(to: 22.5)
+        // Back button setup
+        let backButtonHeight = 22.5
+        let backButtonImage = UIImage(systemName: "arrow.left")?.resizeWithHeight(to: backButtonHeight)
         backButton.setImage(backButtonImage, for: .normal)
         backButton.tintColor = .black
         backButton.translatesAutoresizingMaskIntoConstraints = false
         backButton.addTarget(self, action: #selector(handleBackButtonTapped), for: .touchUpInside)
         view.addSubview(backButton)
+        
+        // Update scrollView constraints
         NSLayoutConstraint.activate([
+            scrollView.topAnchor.constraint(equalTo: backButton.bottomAnchor, constant: verticalPadding),
+            scrollView.leadingAnchor.constraint(equalTo: view.leadingAnchor),
+            scrollView.trailingAnchor.constraint(equalTo: view.trailingAnchor),
+            scrollView.bottomAnchor.constraint(equalTo: view.bottomAnchor),
+            
             backButton.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor, constant: verticalPadding),
             backButton.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: horizontalPadding),
-            backButton.heightAnchor.constraint(equalToConstant: 22.5),
+            backButton.heightAnchor.constraint(equalToConstant: backButtonHeight)
+        ])
+        
+        // Content container setup
+        contentContainerView.translatesAutoresizingMaskIntoConstraints = false
+        scrollView.addSubview(contentContainerView)
+        
+        // Update content container constraints
+        NSLayoutConstraint.activate([
+            contentContainerView.topAnchor.constraint(equalTo: scrollView.topAnchor),
+            contentContainerView.leadingAnchor.constraint(equalTo: scrollView.leadingAnchor),
+            contentContainerView.trailingAnchor.constraint(equalTo: scrollView.trailingAnchor),
+            contentContainerView.bottomAnchor.constraint(equalTo: scrollView.bottomAnchor),
+            contentContainerView.widthAnchor.constraint(equalTo: scrollView.widthAnchor),
+            contentContainerView.heightAnchor.constraint(greaterThanOrEqualTo: view.heightAnchor)
         ])
         
         let fontDescriptor = UIFontDescriptor(fontAttributes: [
@@ -175,6 +197,14 @@ class SignInViewController: UIViewController, UITextFieldDelegate {
         let tapOutsideGesture = UITapGestureRecognizer(target: self, action: #selector(dismissKeyboard))
         tapOutsideGesture.cancelsTouchesInView = false
         view.addGestureRecognizer(tapOutsideGesture)
+        
+        // Add keyboard observers
+        NotificationCenter.default.addObserver(self, selector: #selector(keyboardWillShow(notification:)), name: UIResponder.keyboardWillShowNotification, object: nil)
+        NotificationCenter.default.addObserver(self, selector: #selector(keyboardWillHide(notification:)), name: UIResponder.keyboardWillHideNotification, object: nil)
+    }
+    
+    deinit {
+        NotificationCenter.default.removeObserver(self)
     }
     
     @objc func handleBackButtonTapped() {
@@ -362,6 +392,53 @@ class SignInViewController: UIViewController, UITextFieldDelegate {
     
     @objc private func handleSignUpButtonTapped() {
         navigationController?.pushViewController(SignUpViewController(), animated: true)
+    }
+    
+    // Add keyboard handling methods
+    @objc func keyboardWillShow(notification: NSNotification) {
+        guard let userInfo = notification.userInfo,
+              let keyboardFrame = userInfo[UIResponder.keyboardFrameEndUserInfoKey] as? CGRect,
+              let activeField = activeTextField else {
+            return
+        }
+        
+        let keyboardHeight = keyboardFrame.height
+        
+        // Convert the active text field's frame to the view's coordinate space
+        let textFieldFrame = activeField.convert(activeField.bounds, to: view)
+        
+        // Calculate the bottom of the text field
+        let textFieldBottom = textFieldFrame.maxY
+        
+        // Calculate the area that will be hidden by the keyboard
+        let visibleArea = view.frame.height - keyboardHeight
+        
+        // Check if the text field will be hidden by the keyboard
+        if textFieldBottom > visibleArea {
+            // Calculate how much we need to scroll
+            let scrollOffset = textFieldBottom - visibleArea + 20 // Add padding
+            
+            // Animate the scroll
+            UIView.animate(withDuration: 0.3) {
+                self.scrollView.contentOffset = CGPoint(x: 0, y: scrollOffset)
+            }
+        }
+    }
+    
+    @objc func keyboardWillHide(notification: NSNotification) {
+        // Smoothly scroll back to top when keyboard hides
+        UIView.animate(withDuration: 0.3) {
+            self.scrollView.contentOffset = .zero
+        }
+    }
+    
+    // Add UITextFieldDelegate methods
+    func textFieldDidBeginEditing(_ textField: UITextField) {
+        activeTextField = textField
+    }
+    
+    func textFieldDidEndEditing(_ textField: UITextField) {
+        activeTextField = nil
     }
 }
 
