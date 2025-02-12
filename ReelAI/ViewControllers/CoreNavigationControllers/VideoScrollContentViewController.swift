@@ -624,6 +624,9 @@ class FullScreenVideoCell: UICollectionViewCell {
     
     /// Updates the UI with video data
     func updateUI(with video: Video) {
+        // Hide action bar for unauthenticated users
+        actionBarContainer.isHidden = Auth.auth().currentUser == nil
+        
         // Update counts
         likeCountLabel.text = formatCount(video.likesCount)
         commentCountLabel.text = formatCount(video.commentsCount)
