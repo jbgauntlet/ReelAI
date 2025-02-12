@@ -8,6 +8,7 @@ class ChatViewController: UIViewController {
     private let conversation: Conversation
     private var messages: [Message] = []
     private var messagesListener: ListenerRegistration?
+    private var messagesByDate: [(date: Date, messages: [Message])] = []
     
     // MARK: - UI Components
     private let customNavigationView: UIView = {
@@ -119,6 +120,11 @@ class ChatViewController: UIViewController {
         listenToMessages()
     }
     
+    override func viewDidAppear(_ animated: Bool) {
+        super.viewDidAppear(animated)
+        scrollToBottom(animated: false)
+    }
+    
     deinit {
         NotificationCenter.default.removeObserver(self)
     }
@@ -139,6 +145,9 @@ class ChatViewController: UIViewController {
         view.addSubview(messageInputView)
         messageInputView.addSubview(messageTextField)
         messageInputView.addSubview(sendButton)
+        
+        // Add delegate for messageTextField
+        messageTextField.delegate = self
         
         NSLayoutConstraint.activate([
             customNavigationView.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor),
@@ -198,6 +207,7 @@ class ChatViewController: UIViewController {
         collectionView.delegate = self
         collectionView.dataSource = self
         collectionView.register(MessageCell.self, forCellWithReuseIdentifier: MessageCell.identifier)
+        collectionView.register(DateSeparatorCell.self, forCellWithReuseIdentifier: DateSeparatorCell.identifier)
         
         // Setup actions
         backButton.addTarget(self, action: #selector(handleBack), for: .touchUpInside)
@@ -305,6 +315,21 @@ class ChatViewController: UIViewController {
             }
     }
     
+    private func scrollToBottom(animated: Bool = true) {
+        guard !messagesByDate.isEmpty else { return }
+        let lastSection = messagesByDate.count - 1
+        let lastItemIndex = messagesByDate[lastSection].messages.count
+        let lastIndexPath = IndexPath(item: lastItemIndex, section: lastSection)
+        
+        // Ensure the index path is valid before scrolling
+        let section = lastIndexPath.section
+        let item = lastIndexPath.item
+        if section < collectionView.numberOfSections,
+           item < collectionView.numberOfItems(inSection: section) {
+            collectionView.scrollToItem(at: lastIndexPath, at: .bottom, animated: animated)
+        }
+    }
+    
     @objc private func handleKeyboardWillShow(_ notification: NSNotification) {
         guard let userInfo = notification.userInfo,
               let keyboardFrame = (userInfo[UIResponder.keyboardFrameEndUserInfoKey] as? NSValue)?.cgRectValue else {
@@ -317,12 +342,7 @@ class ChatViewController: UIViewController {
             self.messageInputView.transform = CGAffineTransform(translationX: 0, y: -keyboardHeight + self.view.safeAreaInsets.bottom)
             self.collectionView.contentInset.bottom = keyboardHeight
             self.collectionView.scrollIndicatorInsets.bottom = keyboardHeight
-            
-            // Scroll to bottom if there are messages
-            if !self.messages.isEmpty {
-                let lastItem = IndexPath(item: self.messages.count - 1, section: 0)
-                self.collectionView.scrollToItem(at: lastItem, at: .bottom, animated: true)
-            }
+            self.scrollToBottom(animated: true)
         }
     }
     
@@ -335,6 +355,17 @@ class ChatViewController: UIViewController {
     }
     
     // MARK: - Data
+    private func groupMessagesByDate() {
+        let calendar = Calendar.current
+        let groupedMessages = Dictionary(grouping: messages) { message in
+            calendar.startOfDay(for: message.timestamp)
+        }
+        
+        messagesByDate = groupedMessages.map { (date, messages) in
+            (date: date, messages: messages.sorted { $0.timestamp < $1.timestamp })
+        }.sorted { $0.date < $1.date }
+    }
+    
     private func listenToMessages() {
         let db = Firestore.firestore()
         messagesListener = db.collection("conversations").document(conversation.id)
@@ -354,39 +385,57 @@ class ChatViewController: UIViewController {
                     Message(from: document)
                 }
                 
+                self.groupMessagesByDate()
                 self.collectionView.reloadData()
-                
-                // Scroll to bottom if there are messages
-                if !self.messages.isEmpty {
-                    let lastItem = IndexPath(item: self.messages.count - 1, section: 0)
-                    self.collectionView.scrollToItem(at: lastItem, at: .bottom, animated: true)
-                }
+                self.scrollToBottom(animated: true)
             }
     }
 }
 
 // MARK: - UICollectionView DataSource & Delegate
 extension ChatViewController: UICollectionViewDataSource, UICollectionViewDelegate, UICollectionViewDelegateFlowLayout {
+    func numberOfSections(in collectionView: UICollectionView) -> Int {
+        return messagesByDate.count
+    }
+    
     func collectionView(_ collectionView: UICollectionView, numberOfItemsInSection section: Int) -> Int {
-        return messages.count
+        return messagesByDate[section].messages.count + 1 // +1 for date separator
     }
     
     func collectionView(_ collectionView: UICollectionView, cellForItemAt indexPath: IndexPath) -> UICollectionViewCell {
-        guard let cell = collectionView.dequeueReusableCell(
-            withReuseIdentifier: MessageCell.identifier,
-            for: indexPath
-        ) as? MessageCell else {
-            return UICollectionViewCell()
+        if indexPath.item == 0 {
+            guard let cell = collectionView.dequeueReusableCell(
+                withReuseIdentifier: DateSeparatorCell.identifier,
+                for: indexPath
+            ) as? DateSeparatorCell else {
+                return UICollectionViewCell()
+            }
+            
+            let date = messagesByDate[indexPath.section].date
+            cell.configure(with: date)
+            return cell
+        } else {
+            guard let cell = collectionView.dequeueReusableCell(
+                withReuseIdentifier: MessageCell.identifier,
+                for: indexPath
+            ) as? MessageCell else {
+                return UICollectionViewCell()
+            }
+            
+            let message = messagesByDate[indexPath.section].messages[indexPath.item - 1]
+            cell.configure(with: message)
+            return cell
         }
-        
-        let message = messages[indexPath.item]
-        cell.configure(with: message)
-        return cell
     }
     
     func collectionView(_ collectionView: UICollectionView, layout collectionViewLayout: UICollectionViewLayout, sizeForItemAt indexPath: IndexPath) -> CGSize {
-        let message = messages[indexPath.item]
         let width = collectionView.bounds.width
+        
+        if indexPath.item == 0 {
+            return CGSize(width: width, height: 40) // Height for date separator
+        }
+        
+        let message = messagesByDate[indexPath.section].messages[indexPath.item - 1]
         
         // Calculate height based on message text
         let maxWidth = width * 0.75 - 24 // 75% of width minus padding
@@ -405,5 +454,16 @@ extension ChatViewController: UICollectionViewDataSource, UICollectionViewDelega
         let totalHeight = messageHeight + 24 // Add space for timestamp
         
         return CGSize(width: width, height: totalHeight)
+    }
+}
+
+// MARK: - UITextFieldDelegate
+extension ChatViewController: UITextFieldDelegate {
+    func textFieldShouldReturn(_ textField: UITextField) -> Bool {
+        if textField == messageTextField {
+            handleSendButtonTapped()
+            return false
+        }
+        return true
     }
 } 

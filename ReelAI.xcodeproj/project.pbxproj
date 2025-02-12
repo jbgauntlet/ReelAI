@@ -44,6 +44,7 @@
 		6F61640A2D5CB80100A9B1DD /* PatternDisplayViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6F6164072D5CB80000A9B1DD /* PatternDisplayViewController.swift */; };
 		6F61640B2D5CB80100A9B1DD /* TranscriptionDisplayViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6F6164082D5CB80100A9B1DD /* TranscriptionDisplayViewController.swift */; };
 		6F61640C2D5CB80100A9B1DD /* PatternVerificationViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6F6164092D5CB80100A9B1DD /* PatternVerificationViewController.swift */; };
+		6F6164142D5D1B8800A9B1DD /* DateSeparatorCell.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6F6164132D5D1B8800A9B1DD /* DateSeparatorCell.swift */; };
 		6FB758CB2D5545FE00ECB2C6 /* MessagesViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6FB758CA2D5545FE00ECB2C6 /* MessagesViewController.swift */; };
 		6FB758CE2D55694100ECB2C6 /* NotificationCell.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6FB758CC2D55694100ECB2C6 /* NotificationCell.swift */; };
 		6FB758CF2D55694100ECB2C6 /* FriendRequestCell.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6FB758CD2D55694100ECB2C6 /* FriendRequestCell.swift */; };
@@ -135,6 +136,7 @@
 		6F6164072D5CB80000A9B1DD /* PatternDisplayViewController.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = PatternDisplayViewController.swift; sourceTree = "<group>"; };
 		6F6164082D5CB80100A9B1DD /* TranscriptionDisplayViewController.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = TranscriptionDisplayViewController.swift; sourceTree = "<group>"; };
 		6F6164092D5CB80100A9B1DD /* PatternVerificationViewController.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = PatternVerificationViewController.swift; sourceTree = "<group>"; };
+		6F6164132D5D1B8800A9B1DD /* DateSeparatorCell.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = DateSeparatorCell.swift; sourceTree = "<group>"; };
 		6FB758CA2D5545FE00ECB2C6 /* MessagesViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MessagesViewController.swift; sourceTree = "<group>"; };
 		6FB758CC2D55694100ECB2C6 /* NotificationCell.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = NotificationCell.swift; sourceTree = "<group>"; };
 		6FB758CD2D55694100ECB2C6 /* FriendRequestCell.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = FriendRequestCell.swift; sourceTree = "<group>"; };
@@ -385,6 +387,7 @@
 			children = (
 				6FB758EB2D55C9BB00ECB2C6 /* Cleaned */,
 				6FB758E22D558CBC00ECB2C6 /* ConversationCell.swift */,
+				6F6164132D5D1B8800A9B1DD /* DateSeparatorCell.swift */,
 				6FB758E12D558CBC00ECB2C6 /* MessageCell.swift */,
 				6FB758D42D5575B700ECB2C6 /* UserSearchCell.swift */,
 				6FB758CD2D55694100ECB2C6 /* FriendRequestCell.swift */,
@@ -510,6 +513,7 @@
 				04BA85662C7D122300992B36 /* CommonUtils.swift in Sources */,
 				6FC69C8E2D52C84E0020CF09 /* ProfileVideoThumbnailCell.swift in Sources */,
 				042273362C58598800A92F9A /* Extensions.swift in Sources */,
+				6F6164142D5D1B8800A9B1DD /* DateSeparatorCell.swift in Sources */,
 				6FB758D32D55757B00ECB2C6 /* AddFriendViewController.swift in Sources */,
 				6F216C372D53F357000ED151 /* ProfileListsViewController.swift in Sources */,
 				6F216C352D53D906000ED151 /* FieldType.swift in Sources */,
