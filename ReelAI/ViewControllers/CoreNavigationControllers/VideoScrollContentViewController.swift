@@ -214,36 +214,52 @@ class FullScreenVideoCell: UICollectionViewCell {
     /// Button for liking/unliking the video
     private let likeButton: UIButton = {
         let button = UIButton(type: .system)
-        let config = UIImage.SymbolConfiguration(pointSize: 30, weight: .medium)
+        let config = UIImage.SymbolConfiguration(pointSize: 24, weight: .medium)
         button.setImage(UIImage(systemName: "heart.fill", withConfiguration: config), for: .normal)
         button.tintColor = .white
+        button.layer.shadowColor = UIColor.black.cgColor
+        button.layer.shadowOffset = CGSize(width: 0, height: 1)
+        button.layer.shadowRadius = 2
+        button.layer.shadowOpacity = 0.3
         button.translatesAutoresizingMaskIntoConstraints = false
         return button
     }()
     
     private let commentButton: UIButton = {
         let button = UIButton(type: .system)
-        let config = UIImage.SymbolConfiguration(pointSize: 30, weight: .medium)
+        let config = UIImage.SymbolConfiguration(pointSize: 24, weight: .medium)
         button.setImage(UIImage(systemName: "bubble.right.fill", withConfiguration: config), for: .normal)
         button.tintColor = .white
+        button.layer.shadowColor = UIColor.black.cgColor
+        button.layer.shadowOffset = CGSize(width: 0, height: 1)
+        button.layer.shadowRadius = 2
+        button.layer.shadowOpacity = 0.3
         button.translatesAutoresizingMaskIntoConstraints = false
         return button
     }()
     
     private let bookmarkButton: UIButton = {
         let button = UIButton(type: .system)
-        let config = UIImage.SymbolConfiguration(pointSize: 30, weight: .medium)
+        let config = UIImage.SymbolConfiguration(pointSize: 24, weight: .medium)
         button.setImage(UIImage(systemName: "bookmark.fill", withConfiguration: config), for: .normal)
         button.tintColor = .white
+        button.layer.shadowColor = UIColor.black.cgColor
+        button.layer.shadowOffset = CGSize(width: 0, height: 1)
+        button.layer.shadowRadius = 2
+        button.layer.shadowOpacity = 0.3
         button.translatesAutoresizingMaskIntoConstraints = false
         return button
     }()
     
     private let shareButton: UIButton = {
         let button = UIButton(type: .system)
-        let config = UIImage.SymbolConfiguration(pointSize: 30, weight: .medium)
+        let config = UIImage.SymbolConfiguration(pointSize: 24, weight: .medium)
         button.setImage(UIImage(systemName: "arrowshape.turn.up.right.fill", withConfiguration: config), for: .normal)
         button.tintColor = .white
+        button.layer.shadowColor = UIColor.black.cgColor
+        button.layer.shadowOffset = CGSize(width: 0, height: 1)
+        button.layer.shadowRadius = 2
+        button.layer.shadowOpacity = 0.3
         button.translatesAutoresizingMaskIntoConstraints = false
         return button
     }()
@@ -277,19 +293,26 @@ class FullScreenVideoCell: UICollectionViewCell {
     
     // Add new UI components for transcription and pattern
     private let transcriptionButton: UIButton = {
-        let button = UIButton()
-        let config = UIImage.SymbolConfiguration(pointSize: 30)
-        button.setImage(UIImage(systemName: "text.bubble", withConfiguration: config), for: .normal)
+        let button = UIButton(type: .system)
+        let config = UIImage.SymbolConfiguration(pointSize: 24, weight: .medium)
+        button.setImage(UIImage(systemName: "scroll", withConfiguration: config), for: .normal)
         button.tintColor = .white
+        button.layer.shadowColor = UIColor.black.cgColor
+        button.layer.shadowOffset = CGSize(width: 0, height: 1)
+        button.layer.shadowRadius = 2
+        button.layer.shadowOpacity = 0.3
         button.translatesAutoresizingMaskIntoConstraints = false
         return button
     }()
     
     private let patternButton: UIButton = {
-        let button = UIButton()
-        let config = UIImage.SymbolConfiguration(pointSize: 30)
-        button.setImage(UIImage(systemName: "list.bullet", withConfiguration: config), for: .normal)
+        let button = UIButton(type: .system)
+        let config = UIImage.SymbolConfiguration(pointSize: 24, weight: .medium)
         button.tintColor = .white
+        button.layer.shadowColor = UIColor.black.cgColor
+        button.layer.shadowOffset = CGSize(width: 0, height: 1)
+        button.layer.shadowRadius = 2
+        button.layer.shadowOpacity = 0.3
         button.translatesAutoresizingMaskIntoConstraints = false
         return button
     }()
@@ -613,6 +636,26 @@ class FullScreenVideoCell: UICollectionViewCell {
         // Update transcription and pattern button visibility
         transcriptionButton.isHidden = !video.doTranscribe || video.transcriptionStatus != .completed
         patternButton.isHidden = video.pattern == nil || video.parseStatus != .completed
+        
+        // Update pattern button icon based on pattern type
+        if let pattern = video.pattern, video.parseStatus == .completed {
+            let config = UIImage.SymbolConfiguration(pointSize: 24, weight: .medium)
+            let symbolName: String
+            switch pattern {
+            case "workout":
+                symbolName = "dumbbell"
+            case "recipe":
+                symbolName = "frying.pan"
+            case "tutorial":
+                symbolName = "pencil.and.list.clipboard"
+            default:
+                symbolName = "questionmark.circle"
+            }
+            patternButton.setImage(UIImage(systemName: symbolName, withConfiguration: config), for: .normal)
+            patternButton.isHidden = false
+        } else {
+            patternButton.isHidden = true
+        }
     }
     
     /// Formats a number for display (e.g., 1000 -> 1K)
