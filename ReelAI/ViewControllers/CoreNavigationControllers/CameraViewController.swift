@@ -191,20 +191,28 @@ class CameraViewController: UIViewController, UIImagePickerControllerDelegate, U
     }
     
     private func checkCameraPermissions() {
+        print("🔐 Checking camera permissions...")
         switch AVCaptureDevice.authorizationStatus(for: .video) {
         case .authorized:
+            print("✅ Camera access authorized")
             setupCaptureSession()
         case .notDetermined:
+            print("⏳ Requesting camera permission...")
             AVCaptureDevice.requestAccess(for: .video) { [weak self] granted in
                 if granted {
+                    print("✅ Camera permission granted")
                     DispatchQueue.main.async {
                         self?.setupCaptureSession()
                     }
+                } else {
+                    print("❌ Camera permission denied")
                 }
             }
         case .denied:
+            print("❌ Camera access denied")
             alertCameraAccessNeeded()
         case .restricted:
+            print("⚠️ Camera access restricted")
             alertCameraAccessRestricted()
         @unknown default:
             break
@@ -217,6 +225,7 @@ class CameraViewController: UIViewController, UIImagePickerControllerDelegate, U
         guard let captureSession = captureSession,
               let backCamera = AVCaptureDevice.default(.builtInWideAngleCamera, for: .video, position: .back),
               let input = try? AVCaptureDeviceInput(device: backCamera) else {
+            print("❌ Failed to setup capture session")
             return
         }
         
@@ -239,22 +248,37 @@ class CameraViewController: UIViewController, UIImagePickerControllerDelegate, U
             captureSession.addOutput(movieFileOutput)
         }
         
+        // Setup preview layer
         videoPreviewLayer = AVCaptureVideoPreviewLayer(session: captureSession)
         videoPreviewLayer?.videoGravity = .resizeAspectFill
-        videoPreviewLayer?.frame = view.layer.bounds
         
         if let videoPreviewLayer = videoPreviewLayer {
             previewView.layer.addSublayer(videoPreviewLayer)
+            updatePreviewLayerFrame()
         }
+        
+        print("✅ Capture session setup complete")
+    }
+    
+    private func updatePreviewLayerFrame() {
+        videoPreviewLayer?.frame = previewView.bounds
+    }
+    
+    override func viewDidLayoutSubviews() {
+        super.viewDidLayoutSubviews()
+        updatePreviewLayerFrame()
     }
     
     private func startCaptureSession() {
+        print("📸 Starting capture session...")
         DispatchQueue.global(qos: .userInitiated).async { [weak self] in
             self?.captureSession?.startRunning()
+            print("✅ Capture session started")
         }
     }
     
     private func stopCaptureSession() {
+        print("🛑 Stopping capture session...")
         captureSession?.stopRunning()
     }
     
