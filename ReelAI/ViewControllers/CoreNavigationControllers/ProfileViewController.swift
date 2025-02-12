@@ -115,11 +115,12 @@ class ProfileViewController: UIViewController {
         button.setTitle("Share Profile", for: .normal)
         button.setBackgroundImage(UIImage.from(color: UIColor(hex: "EEEEEF")), for: .normal)
         button.setBackgroundImage(UIImage.from(color: .darkGray), for: .highlighted)
-        button.setTitleColor(.black, for: .normal)
+        button.setTitleColor(.systemGray, for: .normal)
         button.layer.cornerRadius = 15
         button.clipsToBounds = true
         button.layer.borderWidth = 0
-        button.setTitleColor(.black, for: .highlighted)
+        button.isEnabled = false
+        button.alpha = 0.5
         return button
     }()
     
@@ -233,10 +234,9 @@ class ProfileViewController: UIViewController {
         
         contentView.addSubview(buttonStackView)
         
-        // Add buttons to button stack view
+        // Add buttons to button stack view (removed addFriendButton)
         buttonStackView.addArrangedSubview(editProfileButton)
         buttonStackView.addArrangedSubview(shareProfileButton)
-        buttonStackView.addArrangedSubview(addFriendButton)
         
         contentView.addSubview(bioLabel)
         contentView.addSubview(addBioButton)
@@ -324,7 +324,6 @@ class ProfileViewController: UIViewController {
         sectionSelector.addTarget(self, action: #selector(sectionChanged), for: .valueChanged)
         editProfileButton.addTarget(self, action: #selector(editProfileTapped), for: .touchUpInside)
         shareProfileButton.addTarget(self, action: #selector(shareProfileTapped), for: .touchUpInside)
-        addFriendButton.addTarget(self, action: #selector(addFriendTapped), for: .touchUpInside)
         addBioButton.addTarget(self, action: #selector(addBioTapped), for: .touchUpInside)
         optionsButton.addTarget(self, action: #selector(optionsButtonTapped), for: .touchUpInside)
         notificationButton.addTarget(self, action: #selector(notificationButtonTapped), for: .touchUpInside)
@@ -344,10 +343,6 @@ class ProfileViewController: UIViewController {
     
     @objc private func shareProfileTapped() {
         // TODO: Implement share profile
-    }
-    
-    @objc private func addFriendTapped() {
-        // TODO: Implement add friend
     }
     
     @objc private func addBioTapped() {
