@@ -258,6 +258,8 @@ class PostVideoViewController: UIViewController {
     }
     
     @objc private func handlePost() {
+        // Disable post button immediately
+        postButton.isEnabled = false
         compressVideo(videoURL)
     }
     
@@ -326,44 +328,7 @@ class PostVideoViewController: UIViewController {
         let storageRef = Storage.storage().reference()
         let videoRef = storageRef.child("videos/\(userId)/\(videoId).mp4")
         
-        let metadata = StorageMetadata()
-        metadata.contentType = "video/mp4"
-        
-        print("🎬 Uploading video with ID: \(videoId)")
-        let uploadTask = videoRef.putFile(from: videoURL, metadata: metadata)
-        
-        uploadTask.observe(.progress) { [weak self] snapshot in
-            guard let self = self else { return }
-            let percentComplete = Double(snapshot.progress?.completedUnitCount ?? 0) / Double(snapshot.progress?.totalUnitCount ?? 1)
-            self.progressLabel.text = "Upload progress: \(Int(percentComplete * 100))%"
-            print("📊 Upload progress: \(Int(percentComplete * 100))%")
-        }
-        
-        uploadTask.observe(.success) { [weak self] _ in
-            guard let self = self else { return }
-            print("✅ Video upload completed")
-            
-            videoRef.downloadURL { [weak self] url, error in
-                guard let self = self,
-                      let downloadURL = url else {
-                    print("❌ Error getting download URL: \(error?.localizedDescription ?? "Unknown error")")
-                    return
-                }
-                
-                self.saveVideoMetadata(videoId: videoId, downloadURL: downloadURL)
-            }
-        }
-        
-        uploadTask.observe(.failure) { [weak self] snapshot in
-            guard let self = self else { return }
-            print("❌ Upload failed: \(snapshot.error?.localizedDescription ?? "Unknown error")")
-            self.progressLabel.text = "Upload failed: \(snapshot.error?.localizedDescription ?? "Unknown error")"
-        }
-    }
-    
-    private func saveVideoMetadata(videoId: String, downloadURL: URL) {
-        guard let userId = Auth.auth().currentUser?.uid else { return }
-        
+        // Create Firestore document first
         let db = Firestore.firestore()
         
         // Get pattern if selected
@@ -381,7 +346,7 @@ class PostVideoViewController: UIViewController {
         
         let videoData: [String: Any] = [
             "creator_id": userId,
-            "storage_path": downloadURL.absoluteString,
+            "storage_path": "videos/\(userId)/\(videoId).mp4", // Use storage path instead of URL initially
             "title": titleTextField.text ?? "",
             "caption": captionTextField.text ?? "",
             "tags": tags,
@@ -405,22 +370,74 @@ class PostVideoViewController: UIViewController {
             "updated_at": FieldValue.serverTimestamp()
         ]
         
+        // Create the document first
         db.collection("videos").document(videoId).setData(videoData) { [weak self] error in
             guard let self = self else { return }
             
             if let error = error {
                 print("❌ Firestore save error: \(error.localizedDescription)")
                 self.progressLabel.text = "Error saving to Firestore: \(error.localizedDescription)"
-            } else {
-                print("✅ Successfully saved video metadata to Firestore")
-                print("📊 Video data: \(videoData)")
+                return
+            }
+            
+            print("✅ Successfully created video document in Firestore")
+            
+            // Now proceed with video upload
+            let metadata = StorageMetadata()
+            metadata.contentType = "video/mp4"
+            
+            print("🎬 Uploading video with ID: \(videoId)")
+            let uploadTask = videoRef.putFile(from: videoURL, metadata: metadata)
+            
+            uploadTask.observe(.progress) { [weak self] snapshot in
+                guard let self = self else { return }
+                let percentComplete = Double(snapshot.progress?.completedUnitCount ?? 0) / Double(snapshot.progress?.totalUnitCount ?? 1)
+                self.progressLabel.text = "Upload progress: \(Int(percentComplete * 100))%"
+                print("📊 Upload progress: \(Int(percentComplete * 100))%")
+            }
+            
+            uploadTask.observe(.success) { [weak self] _ in
+                guard let self = self else { return }
+                print("✅ Video upload completed")
                 
-                if self.transcribeToggle.isOn {
-                    // Start listening for status updates
-                    self.listenToVideoStatus(videoId: videoId)
-                } else {
-                    // Complete immediately if no transcription
-                    self.handleUploadCompletion()
+                videoRef.downloadURL { [weak self] url, error in
+                    guard let self = self,
+                          let downloadURL = url else {
+                        print("❌ Error getting download URL: \(error?.localizedDescription ?? "Unknown error")")
+                        return
+                    }
+                    
+                    // Update the document with the actual download URL
+                    db.collection("videos").document(videoId).updateData([
+                        "storage_path": downloadURL.absoluteString
+                    ]) { error in
+                        if let error = error {
+                            print("❌ Error updating storage path: \(error.localizedDescription)")
+                        } else {
+                            print("✅ Successfully updated storage path")
+                            
+                            if self.transcribeToggle.isOn {
+                                // Start listening for status updates
+                                self.listenToVideoStatus(videoId: videoId)
+                            } else {
+                                // Complete immediately if no transcription
+                                self.handleUploadCompletion()
+                            }
+                        }
+                    }
+                }
+            }
+            
+            uploadTask.observe(.failure) { [weak self] snapshot in
+                guard let self = self else { return }
+                print("❌ Upload failed: \(snapshot.error?.localizedDescription ?? "Unknown error")")
+                self.progressLabel.text = "Upload failed: \(snapshot.error?.localizedDescription ?? "Unknown error")"
+                
+                // Delete the Firestore document since upload failed
+                db.collection("videos").document(videoId).delete { error in
+                    if let error = error {
+                        print("❌ Error deleting failed video document: \(error.localizedDescription)")
+                    }
                 }
             }
         }
@@ -488,27 +505,36 @@ class PostVideoViewController: UIViewController {
         switch transcriptionStatus {
         case "pending":
             progressLabel.text = "Waiting to begin transcription..."
+            postButton.isEnabled = false
         case "processing":
             progressLabel.text = "Transcribing video..."
+            postButton.isEnabled = false
         case "completed":
             if let pattern = pattern {
                 switch parseStatus {
                 case "pending":
                     progressLabel.text = "Transcription complete. Analyzing \(pattern) pattern..."
+                    postButton.isEnabled = false
                 case "completed":
                     progressLabel.text = "Pattern analysis complete!"
+                    postButton.isEnabled = true
                 case "failed":
                     progressLabel.text = "Transcription complete, but pattern analysis failed"
+                    postButton.isEnabled = true
                 default:
                     progressLabel.text = "Transcription complete!"
+                    postButton.isEnabled = true
                 }
             } else {
                 progressLabel.text = "Transcription complete!"
+                postButton.isEnabled = true
             }
         case "error":
             progressLabel.text = "Transcription failed"
+            postButton.isEnabled = true
         default:
             progressLabel.text = "Unknown status"
+            postButton.isEnabled = true
         }
     }
     
@@ -526,12 +552,16 @@ class PostVideoViewController: UIViewController {
     
     private func handleTranscriptionError(error: String?) {
         progressLabel.text = "Error: \(error ?? "Unknown error")"
+        // Re-enable post button on error
         postButton.isEnabled = true
     }
     
     private func handleUploadCompletion() {
         progressLabel.text = "Upload and processing complete!"
-        postButton.isEnabled = false
+        // Only re-enable post button if no transcription was requested
+        if !transcribeToggle.isOn {
+            postButton.isEnabled = true
+        }
         navigationController?.popViewController(animated: true)
     }
     
