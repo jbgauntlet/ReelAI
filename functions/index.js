@@ -19,6 +19,120 @@ if (!admin.apps.length) {
 
 // Constants
 const MAX_RETRIES = 3;
+const VALID_PATTERNS = ["workout", "recipe", "tutorial"];
+
+// Pattern-specific prompts
+const PATTERN_PROMPTS = {
+    workout: `You are a workout analyzer. Given a transcript of a workout video, create a structured JSON with the following format:
+{
+    "type": "workout",
+    "exercises": [
+        {
+            "name": string,
+            "sets": number,
+            "reps": number,
+            "weight": string,
+            "duration": string,
+            "intensity": string,
+            "rest_duration": string
+        }
+    ]
+}
+
+
+If the transcript doesn't contain a proper workout instruction, return: { "error": "Not a valid workout" }
+Don't make any exercises up and stay true as best as possible to the transcription.
+If something is explicity mentioned don't change it. 
+When possible use any additional context to fill in gaps.
+The output should be a properly formatted json object with these attributes.
+Don't include attributes that are not needed. For example if sets and reps are present and no duration is mentioned then don't come up with a random duration.
+All fields are not required.
+
+Transcript:
+`,
+    recipe: `You are a recipe analyzer. Given a transcript of a cooking video, create a structured JSON with the following format:
+{
+    "type": "recipe",
+    "name": string,
+    "ingredients": [
+        {
+            "item": string,
+            "amount": string,
+            "unit": string
+        }
+    ],
+    "steps": string[],
+    "prepTime": string,
+    "cookTime": string,
+    "servings": number
+}
+
+If the transcript doesn't contain a proper recipe instruction, return: { "error": "Not a valid recipe" }
+Don't make any recipes up and stay true as best as possible to the transcription.
+If something is explicity mentioned don't change it. 
+When possible use any additional context to fill in gaps.
+The output should be a properly formatted json object with these attributes.
+Don't include attributes that are not needed. For example if item and amount are present and no unit is mentioned then don't come up with a random unit.
+All fields are not required.
+
+Transcript:
+`,
+    tutorial: `You are a tutorial analyzer. Given a transcript of a tutorial video, create a structured JSON with the following format:
+{
+    "type": "tutorial",
+    "subject": string,
+    "steps": [
+        {
+            "title": string,
+            "description": string,
+            "duration": string
+        }
+    ]
+}
+
+If the transcript doesn't contain a proper tutorial instruction, return: { "error": "Not a valid tutorial" }
+Don't make any steps up and stay true as best as possible to the transcription.
+If something is explicity mentioned don't change it. 
+When possible use any additional context to fill in gaps.
+The output should be a properly formatted json object with these attributes.
+Don't include attributes that are not needed. For example if title and description are present and no duration is mentioned then don't come up with a random duration.
+All fields are not required.
+
+Transcript:
+`
+};
+
+/**
+ * Parses a transcription using a specific pattern template through GPT.
+ * @param {string} pattern - The pattern type to use (workout, recipe, or tutorial).
+ * @param {string} transcriptionText - The text to analyze.
+ * @return {Promise<Object>} The parsed JSON result or error object.
+ */
+async function parseTranscriptionPattern(pattern, transcriptionText) {
+    const openai = new OpenAI({
+        apiKey: process.env.OPENAI_API_KEY,
+    });
+
+    const prompt = PATTERN_PROMPTS[pattern] + transcriptionText;
+
+    const completion = await openai.chat.completions.create({
+        model: "gpt-3.5-turbo-1106",
+        messages: [
+            {
+                role: "system",
+                content: "You are a specialized content parser that converts video transcripts into structured data. Be precise and strict about following the required JSON format.",
+            },
+            {
+                role: "user",
+                content: prompt,
+            },
+        ],
+        response_format: {type: "json_object"},
+        temperature: 0.3
+    });
+
+    return JSON.parse(completion.choices[0].message.content);
+}
 
 exports.transcribeVideo = onObjectFinalized({
     memory: "1024MiB",
@@ -55,6 +169,12 @@ exports.transcribeVideo = onObjectFinalized({
         const videoData = videoDoc.data();
         if (!videoData) {
             throw new Error("Video data not found");
+        }
+
+        // Check if transcription is requested
+        if (!videoData.do_transcribe) {
+            console.log(`Transcription not requested for video ${videoId}`);
+            return;
         }
 
         // Check if we've exceeded retry attempts
@@ -98,18 +218,44 @@ exports.transcribeVideo = onObjectFinalized({
             });
 
             // Store the transcription in Firebase
-            await videoDoc.ref.update({
+            const updateData = {
                 transcriptionStatus: "completed",
                 transcriptionText: transcription.text || "",
                 transcriptionWords: transcription.words || [],
                 transcriptionError: null,
-            });
+            };
 
-            console.log(`Successfully transcribed video ${videoId}`);
+            // If a valid pattern is specified, process it
+            if (videoData.pattern && VALID_PATTERNS.includes(videoData.pattern)) {
+                console.log(`Processing pattern ${videoData.pattern} for video ${videoId}`);
+                try {
+                    const patternJson = await parseTranscriptionPattern(
+                        videoData.pattern,
+                        transcription.text
+                    );
+
+                    if (patternJson.error) {
+                        updateData.parse_status = "failed";
+                        updateData.parse_error = patternJson.error;
+                    } else {
+                        updateData.parse_status = "completed";
+                        updateData.pattern_json = patternJson;
+                    }
+                } catch (parseError) {
+                    console.error(`Pattern parsing error for video ${videoId}:`, parseError);
+                    updateData.parse_status = "failed";
+                    updateData.parse_error = parseError.message;
+                }
+            }
+
+            await videoDoc.ref.update(updateData);
+
+            console.log(`Successfully processed video ${videoId}`);
             return {
                 success: true,
                 transcriptionText: transcription.text,
                 transcriptionWords: transcription.words,
+                pattern_json: updateData.pattern_json
             };
         } finally {
             // Clean up temp file
