@@ -21,6 +21,10 @@ class Video: Identifiable {
     let title: String?
     let tags: [String]?
     
+    // Transcription
+    var transcription: String?
+    var transcriptionStatus: TranscriptionStatus
+    
     // Counters
     var viewsCount: Int
     private(set) var likesCount: Int
@@ -47,6 +51,8 @@ class Video: Identifiable {
          caption: String? = nil,
          title: String? = nil,
          tags: [String]? = nil,
+         transcription: String? = nil,
+         transcriptionStatus: TranscriptionStatus = .pending,
          viewsCount: Int = 0,
          likesCount: Int = 0,
          commentsCount: Int = 0,
@@ -59,6 +65,8 @@ class Video: Identifiable {
         self.caption = caption
         self.title = title
         self.tags = tags
+        self.transcription = transcription
+        self.transcriptionStatus = transcriptionStatus
         self.viewsCount = viewsCount
         self.likesCount = likesCount
         self.commentsCount = commentsCount
@@ -84,6 +92,8 @@ class Video: Identifiable {
         self.caption = data["caption"] as? String
         self.title = data["title"] as? String
         self.tags = data["tags"] as? [String]
+        self.transcription = data["transcription"] as? String
+        self.transcriptionStatus = TranscriptionStatus(rawValue: data["transcription_status"] as? String ?? "") ?? .pending
         self.createdAt = createdAtTimestamp.dateValue()
         self.viewsCount = (data["views_count"] as? Int) ?? 0
         self.likesCount = (data["likes_count"] as? Int) ?? 0
@@ -137,6 +147,16 @@ class Video: Identifiable {
         self.metadata = currentMetadata
     }
     
+    // MARK: - Transcription Management
+    func updateTranscription(_ transcription: String) {
+        self.transcription = transcription
+        self.transcriptionStatus = .completed
+    }
+    
+    func setTranscriptionFailed() {
+        self.transcriptionStatus = .failed
+    }
+    
     // MARK: - Firestore Data
     var firestoreData: [String: Any] {
         var data: [String: Any] = [
@@ -147,14 +167,24 @@ class Video: Identifiable {
             "comments_count": commentsCount,
             "bookmarks_count": bookmarksCount,
             "created_at": Timestamp(date: createdAt),
-            "updated_at": Timestamp(date: updatedAt)
+            "updated_at": Timestamp(date: updatedAt),
+            "transcription_status": transcriptionStatus.rawValue
         ]
         
         // Add optional fields if they exist
         if let caption = caption { data["caption"] = caption }
         if let title = title { data["title"] = title }
         if let tags = tags { data["tags"] = tags }
+        if let transcription = transcription { data["transcription"] = transcription }
         
         return data
     }
+}
+
+// MARK: - TranscriptionStatus
+enum TranscriptionStatus: String {
+    case pending
+    case inProgress
+    case completed
+    case failed
 } 

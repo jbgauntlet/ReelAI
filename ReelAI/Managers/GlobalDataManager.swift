@@ -7,8 +7,9 @@ class GlobalDataManager {
     static let shared = GlobalDataManager()
     var globalNav = UIView()
     var user: User?
-
-    private init() {}
+    
+    private init() {
+    }
     
     func handleLoginSuccess(_ firebaseUser: FirebaseAuth.User) -> Bool {
         // Get the ID token
