@@ -255,11 +255,13 @@ class FullScreenVideoCell: UICollectionViewCell {
         let button = UIButton(type: .system)
         let config = UIImage.SymbolConfiguration(pointSize: 24, weight: .medium)
         button.setImage(UIImage(systemName: "arrowshape.turn.up.right.fill", withConfiguration: config), for: .normal)
-        button.tintColor = .white
+        button.tintColor = .systemGray5  // Even lighter gray color
+        button.alpha = 0.5  // Add transparency
         button.layer.shadowColor = UIColor.black.cgColor
         button.layer.shadowOffset = CGSize(width: 0, height: 1)
         button.layer.shadowRadius = 2
         button.layer.shadowOpacity = 0.3
+        button.isEnabled = false  // Keep button disabled
         button.translatesAutoresizingMaskIntoConstraints = false
         return button
     }()
