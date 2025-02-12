@@ -295,7 +295,7 @@ class FullScreenVideoCell: UICollectionViewCell {
     private let transcriptionButton: UIButton = {
         let button = UIButton(type: .system)
         let config = UIImage.SymbolConfiguration(pointSize: 24, weight: .medium)
-        button.setImage(UIImage(systemName: "scroll", withConfiguration: config), for: .normal)
+        button.setImage(UIImage(systemName: "scroll.fill", withConfiguration: config), for: .normal)
         button.tintColor = .white
         button.layer.shadowColor = UIColor.black.cgColor
         button.layer.shadowOffset = CGSize(width: 0, height: 1)
@@ -643,13 +643,13 @@ class FullScreenVideoCell: UICollectionViewCell {
             let symbolName: String
             switch pattern {
             case "workout":
-                symbolName = "dumbbell"
+                symbolName = "dumbbell.fill"
             case "recipe":
-                symbolName = "frying.pan"
+                symbolName = "frying.pan.fill"
             case "tutorial":
-                symbolName = "pencil.and.list.clipboard"
+                symbolName = "list.bullet.clipboard.fill"
             default:
-                symbolName = "questionmark.circle"
+                symbolName = "questionmark.circle.fill"
             }
             patternButton.setImage(UIImage(systemName: symbolName, withConfiguration: config), for: .normal)
             patternButton.isHidden = false
