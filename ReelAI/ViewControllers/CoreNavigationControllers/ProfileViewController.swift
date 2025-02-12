@@ -124,29 +124,6 @@ class ProfileViewController: UIViewController {
         return button
     }()
     
-    private let addFriendButton: UIButton = {
-        let button = UIButton(type: .system)
-        let config = UIImage.SymbolConfiguration(pointSize: 20, weight: .medium)
-        button.setImage(UIImage(systemName: "person.badge.plus", withConfiguration: config), for: .normal)
-        button.setBackgroundImage(UIImage.from(color: UIColor(hex: "EEEEEF")), for: .normal)
-        button.setBackgroundImage(UIImage.from(color: .darkGray), for: .highlighted)
-        button.tintColor = .black
-        button.layer.cornerRadius = 15
-        button.clipsToBounds = true
-        button.layer.borderWidth = 0
-        button.setTitleColor(.black, for: .highlighted)
-        return button
-    }()
-    
-    private let bioLabel: UILabel = {
-        let label = UILabel()
-        label.font = UIFont.systemFont(ofSize: 14)
-        label.textAlignment = .center
-        label.numberOfLines = 0
-        label.translatesAutoresizingMaskIntoConstraints = false
-        return label
-    }()
-    
     private let addBioButton: UIButton = {
         let button = UIButton(type: .system)
         button.setTitle("Add bio", for: .normal)
@@ -206,6 +183,15 @@ class ProfileViewController: UIViewController {
         return view
     }()
     
+    private let bioLabel: UILabel = {
+        let label = UILabel()
+        label.font = UIFont.systemFont(ofSize: 14)
+        label.textAlignment = .center
+        label.numberOfLines = 0
+        label.translatesAutoresizingMaskIntoConstraints = false
+        return label
+    }()
+    
     // MARK: - Lifecycle
     override func viewDidLoad() {
         super.viewDidLoad()
@@ -239,7 +225,6 @@ class ProfileViewController: UIViewController {
         buttonStackView.addArrangedSubview(shareProfileButton)
         
         contentView.addSubview(bioLabel)
-        contentView.addSubview(addBioButton)
         contentView.addSubview(sectionSelector)
         contentView.addSubview(videoCollectionView)
         
@@ -287,9 +272,6 @@ class ProfileViewController: UIViewController {
             bioLabel.leadingAnchor.constraint(equalTo: contentView.leadingAnchor, constant: padding),
             bioLabel.trailingAnchor.constraint(equalTo: contentView.trailingAnchor, constant: -padding),
             
-            addBioButton.topAnchor.constraint(equalTo: buttonStackView.bottomAnchor, constant: padding),
-            addBioButton.centerXAnchor.constraint(equalTo: contentView.centerXAnchor),
-            
             sectionSelector.topAnchor.constraint(equalTo: bioLabel.bottomAnchor, constant: padding),
             sectionSelector.leadingAnchor.constraint(equalTo: contentView.leadingAnchor, constant: padding),
             sectionSelector.trailingAnchor.constraint(equalTo: contentView.trailingAnchor, constant: -padding),
@@ -324,7 +306,6 @@ class ProfileViewController: UIViewController {
         sectionSelector.addTarget(self, action: #selector(sectionChanged), for: .valueChanged)
         editProfileButton.addTarget(self, action: #selector(editProfileTapped), for: .touchUpInside)
         shareProfileButton.addTarget(self, action: #selector(shareProfileTapped), for: .touchUpInside)
-        addBioButton.addTarget(self, action: #selector(addBioTapped), for: .touchUpInside)
         optionsButton.addTarget(self, action: #selector(optionsButtonTapped), for: .touchUpInside)
         notificationButton.addTarget(self, action: #selector(notificationButtonTapped), for: .touchUpInside)
     }
@@ -343,10 +324,6 @@ class ProfileViewController: UIViewController {
     
     @objc private func shareProfileTapped() {
         // TODO: Implement share profile
-    }
-    
-    @objc private func addBioTapped() {
-        // TODO: Implement add bio
     }
     
     @objc private func optionsButtonTapped() {
@@ -400,11 +377,9 @@ class ProfileViewController: UIViewController {
                 
                 if let bio = data["bio"] as? String, !bio.isEmpty {
                     self.bioLabel.isHidden = false
-                    self.addBioButton.isHidden = true
                     self.bioLabel.text = bio
                 } else {
                     self.bioLabel.isHidden = true
-                    self.addBioButton.isHidden = false
                 }
                 
                 // Handle avatar image
