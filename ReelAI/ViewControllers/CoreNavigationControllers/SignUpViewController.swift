@@ -40,12 +40,19 @@ class SignUpViewController: UIViewController {
         super.viewDidLoad()
         view.backgroundColor = .white
         
+        // Configure scrollView first
+        scrollView.translatesAutoresizingMaskIntoConstraints = false
+        scrollView.keyboardDismissMode = .interactive
+        scrollView.alwaysBounceVertical = true
+        view.addSubview(scrollView)
+        
         let textFieldHeight = 60.0
         let verticalPadding = 30.0
         let horizontalPadding = 30.0
         let buttonHeight = textFieldHeight
         let labelHeight = 35.0
         
+        // Back button setup
         let backButtonHeight = 22.5
         let backButtonImage = UIImage(systemName: "arrow.left")?.resizeWithHeight(to: backButtonHeight)
         backButton.setImage(backButtonImage, for: .normal)
@@ -53,30 +60,32 @@ class SignUpViewController: UIViewController {
         backButton.translatesAutoresizingMaskIntoConstraints = false
         backButton.addTarget(self, action: #selector(handleBackButtonTapped), for: .touchUpInside)
         view.addSubview(backButton)
-        NSLayoutConstraint.activate([
-            backButton.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor, constant: verticalPadding),
-            backButton.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: horizontalPadding),
-            backButton.heightAnchor.constraint(equalToConstant: backButtonHeight),
-        ])
         
-        scrollView.translatesAutoresizingMaskIntoConstraints = false
-        view.addSubview(scrollView)
+        // Update scrollView constraints
         NSLayoutConstraint.activate([
             scrollView.topAnchor.constraint(equalTo: backButton.bottomAnchor, constant: verticalPadding),
             scrollView.leadingAnchor.constraint(equalTo: view.leadingAnchor),
             scrollView.trailingAnchor.constraint(equalTo: view.trailingAnchor),
-            scrollView.bottomAnchor.constraint(equalTo: view.safeAreaLayoutGuide.bottomAnchor)
+            scrollView.bottomAnchor.constraint(equalTo: view.bottomAnchor),
+            
+            backButton.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor, constant: verticalPadding),
+            backButton.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: horizontalPadding),
+            backButton.heightAnchor.constraint(equalToConstant: backButtonHeight)
         ])
         
-        let contentContainerHeight = 5 * textFieldHeight + 4 * verticalPadding + labelHeight
+        // Content container setup with frame-based sizing
         contentContainerView.translatesAutoresizingMaskIntoConstraints = false
         scrollView.addSubview(contentContainerView)
+        
+        // Update content container constraints
         NSLayoutConstraint.activate([
-            contentContainerView.heightAnchor.constraint(equalToConstant: contentContainerHeight),
-            contentContainerView.centerYAnchor.constraint(equalTo: scrollView.centerYAnchor, constant: -((backButtonHeight + verticalPadding * 2) / 2)),
+            contentContainerView.topAnchor.constraint(equalTo: scrollView.topAnchor),
             contentContainerView.leadingAnchor.constraint(equalTo: scrollView.leadingAnchor),
             contentContainerView.trailingAnchor.constraint(equalTo: scrollView.trailingAnchor),
-            contentContainerView.widthAnchor.constraint(equalTo: scrollView.widthAnchor)
+            contentContainerView.bottomAnchor.constraint(equalTo: scrollView.bottomAnchor),
+            contentContainerView.widthAnchor.constraint(equalTo: scrollView.widthAnchor),
+            // Ensure the content is tall enough
+            contentContainerView.heightAnchor.constraint(greaterThanOrEqualTo: view.heightAnchor)
         ])
         
         let fontDescriptor = UIFontDescriptor(fontAttributes: [
@@ -238,15 +247,21 @@ class SignUpViewController: UIViewController {
     }
     
     @objc func handleSignUpButtonTapped() {
-        guard validateFields() else { return }
+        print("[SignUp] Button tapped - Starting validation")
+        guard validateFields() else {
+            print("[SignUp] Field validation failed")
+            return
+        }
         
         guard let email = emailTextField.text?.trimmingCharacters(in: .whitespacesAndNewlines),
               let password = passwordTextField.text,
               let name = nameTextField.text?.trimmingCharacters(in: .whitespacesAndNewlines),
               let username = usernameTextField.text?.trimmingCharacters(in: .whitespacesAndNewlines) else {
+            print("[SignUp] Failed to unwrap text fields")
             return
         }
         
+        print("[SignUp] Fields validated successfully - Starting sign up process")
         setLoading(true)
         signUp(email, password, name, username)
     }
@@ -256,24 +271,34 @@ class SignUpViewController: UIViewController {
     }
     
     func signUp(_ email: String, _ password: String, _ name: String, _ username: String) {
+        print("[SignUp] Creating user with Firebase Auth")
         // Create the user with Firebase Auth
         Auth.auth().createUser(withEmail: email, password: password) { [weak self] authResult, error in
-            guard let self = self else { return }
+            guard let self = self else {
+                print("[SignUp] Self was deallocated during Firebase Auth")
+                return
+            }
             
             DispatchQueue.main.async {
                 if let error = error as NSError? {
+                    print("[SignUp] Firebase Auth error: \(error.localizedDescription)")
                     if let authError = AuthErrorCode(rawValue: error.code) {
                         switch authError {
                         case .emailAlreadyInUse:
+                            print("[SignUp] Email already in use")
                             self.showError("This email is already registered", textField: self.emailTextField)
                         case .invalidEmail:
+                            print("[SignUp] Invalid email format")
                             self.showError("Please enter a valid email address", textField: self.emailTextField)
                         case .weakPassword:
+                            print("[SignUp] Weak password")
                             self.showError("Password is too weak. Please use at least 6 characters", textField: self.passwordTextField)
                         default:
+                            print("[SignUp] Other Firebase Auth error: \(error.localizedDescription)")
                             self.showError("Error: \(error.localizedDescription)")
                         }
                     } else {
+                        print("[SignUp] Non-Firebase Auth error: \(error.localizedDescription)")
                         self.showError("An error occurred. Please try again")
                     }
                     self.setLoading(false)
@@ -281,47 +306,46 @@ class SignUpViewController: UIViewController {
                 }
                 
                 guard let user = authResult?.user else {
+                    print("[SignUp] No auth result or user after successful Firebase Auth")
                     self.showError("An error occurred. Please try again")
                     self.setLoading(false)
                     return
                 }
                 
+                print("[SignUp] User created successfully, saving additional data to Firestore")
                 // Store additional user data in Firestore
+                let db = Firestore.firestore()
                 let userData: [String: Any] = [
-                    // Basic Info
                     "name": name,
-                    "name_lowercase": name.lowercased(),
                     "username": username,
-                    "username_lowercase": username.lowercased(),
                     "email": email,
                     "bio": "",
-                    "avatar": "",
-                    "links": [],
-                    
-                    // Counters (initialized to 0)
-                    "followers_count": 0,
-                    "following_count": 0,
-                    "likes_count": 0,
-                    "videos_count": 0,
-                    "friends_count": 0,
-                    "comments_count": 0,
-                    
-                    // Metadata
-                    "created_at": FieldValue.serverTimestamp(),
-                    "updated_at": FieldValue.serverTimestamp()
+                    "profileImageUrl": "",
+                    "followers": [],
+                    "following": [],
+                    "posts": [],
+                    "likes": [],
+                    "comments": [],
+                    "notifications": [],
+                    "createdAt": FieldValue.serverTimestamp(),
+                    "updatedAt": FieldValue.serverTimestamp()
                 ]
                 
-                let db = Firestore.firestore()
                 db.collection("users").document(user.uid).setData(userData) { [weak self] error in
-                    guard let self = self else { return }
+                    guard let self = self else {
+                        print("[SignUp] Self was deallocated during Firestore save")
+                        return
+                    }
                     
                     DispatchQueue.main.async {
                         if let error = error {
+                            print("[SignUp] Firestore error: \(error.localizedDescription)")
                             self.showError("Error saving user data: \(error.localizedDescription)")
                             self.setLoading(false)
                             return
                         }
                         
+                        print("[SignUp] User data saved successfully, updating GlobalDataManager")
                         // Store user data in GlobalDataManager
                         var userModel = User()
                         userModel.uid = user.uid
@@ -331,6 +355,7 @@ class SignUpViewController: UIViewController {
                         userModel.bio = ""
                         GlobalDataManager.shared.user = userModel
                         
+                        print("[SignUp] Navigating to main screen")
                         // Navigate to main screen
                         navigateToControllerAsRootController(self.view.window, MainTabBarController())
                     }
@@ -356,29 +381,39 @@ class SignUpViewController: UIViewController {
     
     @objc func keyboardWillShow(notification: NSNotification) {
         guard let userInfo = notification.userInfo,
-              let keyboardFrame = userInfo[UIResponder.keyboardFrameEndUserInfoKey] as? CGRect else {
+              let keyboardFrame = userInfo[UIResponder.keyboardFrameEndUserInfoKey] as? CGRect,
+              let activeField = activeTextField else {
             return
         }
-
+        
         let keyboardHeight = keyboardFrame.height
-        var contentInset = scrollView.contentInset
-        contentInset.bottom = keyboardHeight
-        scrollView.contentInset = contentInset
-        scrollView.scrollIndicatorInsets = contentInset
-
-        if let activeTextField = activeTextField {
-            let visibleRect = view.frame.inset(by: UIEdgeInsets(top: 0, left: 0, bottom: keyboardHeight, right: 0))
-            if !visibleRect.contains(activeTextField.frame.origin) {
-                scrollView.scrollRectToVisible(activeTextField.frame, animated: true)
+        
+        // Convert the active text field's frame to the view's coordinate space
+        let textFieldFrame = activeField.convert(activeField.bounds, to: view)
+        
+        // Calculate the bottom of the text field
+        let textFieldBottom = textFieldFrame.maxY
+        
+        // Calculate the area that will be hidden by the keyboard
+        let visibleArea = view.frame.height - keyboardHeight
+        
+        // Check if the text field will be hidden by the keyboard
+        if textFieldBottom > visibleArea {
+            // Calculate how much we need to scroll
+            let scrollOffset = textFieldBottom - visibleArea + 20 // Add padding
+            
+            // Animate the scroll
+            UIView.animate(withDuration: 0.3) {
+                self.scrollView.contentOffset = CGPoint(x: 0, y: scrollOffset)
             }
         }
     }
     
     @objc func keyboardWillHide(notification: NSNotification) {
-        var contentInset = scrollView.contentInset
-        contentInset.bottom = 0
-        scrollView.contentInset = contentInset
-        scrollView.scrollIndicatorInsets = contentInset
+        // Smoothly scroll back to top when keyboard hides
+        UIView.animate(withDuration: 0.3) {
+            self.scrollView.contentOffset = .zero
+        }
     }
     
     @objc private func dismissKeyboard() {

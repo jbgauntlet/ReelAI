@@ -31,6 +31,14 @@ class SignInViewController: UIViewController, UITextFieldDelegate {
         return indicator
     }()
     
+    private let signUpButton: UIButton = {
+        let button = UIButton(type: .system)
+        button.setTitle("Don't have an account? Sign Up", for: .normal)
+        button.setTitleColor(ColorPalette.gray, for: .normal)
+        button.translatesAutoresizingMaskIntoConstraints = false
+        return button
+    }()
+    
     override func viewDidLoad() {
         super.viewDidLoad()
         view.backgroundColor = .white
@@ -143,9 +151,10 @@ class SignInViewController: UIViewController, UITextFieldDelegate {
             signInButton.heightAnchor.constraint(equalToConstant: buttonHeight),
         ])
         
-        // Add error label and loading indicator
+        // Add error label, loading indicator, and sign up button
         contentContainerView.addSubview(errorLabel)
         contentContainerView.addSubview(loadingIndicator)
+        contentContainerView.addSubview(signUpButton)
         
         NSLayoutConstraint.activate([
             errorLabel.topAnchor.constraint(equalTo: signInButton.bottomAnchor, constant: 8),
@@ -153,8 +162,15 @@ class SignInViewController: UIViewController, UITextFieldDelegate {
             errorLabel.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -horizontalPadding),
             
             loadingIndicator.centerYAnchor.constraint(equalTo: signInButton.centerYAnchor),
-            loadingIndicator.trailingAnchor.constraint(equalTo: signInButton.trailingAnchor, constant: -16)
+            loadingIndicator.trailingAnchor.constraint(equalTo: signInButton.trailingAnchor, constant: -16),
+            
+            signUpButton.topAnchor.constraint(equalTo: errorLabel.bottomAnchor, constant: 8),
+            signUpButton.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: horizontalPadding),
+            signUpButton.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -horizontalPadding),
+            signUpButton.heightAnchor.constraint(equalToConstant: buttonHeight)
         ])
+        
+        signUpButton.addTarget(self, action: #selector(handleSignUpButtonTapped), for: .touchUpInside)
         
         let tapOutsideGesture = UITapGestureRecognizer(target: self, action: #selector(dismissKeyboard))
         tapOutsideGesture.cancelsTouchesInView = false
@@ -342,6 +358,10 @@ class SignInViewController: UIViewController, UITextFieldDelegate {
             loadingIndicator.stopAnimating()
             signInButton.setTitle("Sign In", for: .normal)
         }
+    }
+    
+    @objc private func handleSignUpButtonTapped() {
+        navigationController?.pushViewController(SignUpViewController(), animated: true)
     }
 }
 
