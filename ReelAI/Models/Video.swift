@@ -112,7 +112,7 @@ class Video: Identifiable {
         self.caption = data["caption"] as? String
         self.title = data["title"] as? String
         self.tags = data["tags"] as? [String]
-        self.transcription = data["transcription"] as? String
+        self.transcription = data["transcriptionText"] as? String
         self.transcriptionStatus = TranscriptionStatus(rawValue: data["transcriptionStatus"] as? String ?? "") ?? .pending
         self.transcriptionError = data["transcription_error"] as? String
         self.doTranscribe = data["do_transcribe"] as? Bool ?? false
@@ -202,7 +202,7 @@ class Video: Identifiable {
         if let caption = caption { data["caption"] = caption }
         if let title = title { data["title"] = title }
         if let tags = tags { data["tags"] = tags }
-        if let transcription = transcription { data["transcription"] = transcription }
+        if let transcription = transcription { data["transcriptionText"] = transcription }
         if let transcriptionError = transcriptionError { data["transcription_error"] = transcriptionError }
         if let pattern = pattern { data["pattern"] = pattern }
         if let parseStatus = parseStatus { data["parse_status"] = parseStatus.rawValue }

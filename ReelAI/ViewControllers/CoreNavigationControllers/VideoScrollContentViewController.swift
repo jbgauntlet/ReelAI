@@ -955,7 +955,11 @@ class FullScreenVideoCell: UICollectionViewCell {
     
     @objc private func transcriptionTapped() {
         guard let video = currentVideo,
-              let transcription = video.transcription else { return }
+              let transcription = video.transcription,
+              !transcription.isEmpty else {
+            print("⚠️ No transcription available")
+            return
+        }
         delegate?.didTapTranscription(for: video, transcription: transcription)
     }
     

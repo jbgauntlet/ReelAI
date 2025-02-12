@@ -389,6 +389,7 @@ class PostVideoViewController: UIViewController {
             // Transcription fields
             "do_transcribe": transcribeToggle.isOn,
             "transcriptionStatus": TranscriptionStatus.pending.rawValue,
+            "transcriptionText": "",  // Initialize with empty string
             
             // Pattern fields
             "pattern": pattern as Any,
@@ -443,6 +444,7 @@ class PostVideoViewController: UIViewController {
                 
                 // Get the statuses
                 let transcriptionStatus = videoData["transcriptionStatus"] as? String ?? ""
+                let transcriptionText = videoData["transcriptionText"] as? String
                 let parseStatus = videoData["parse_status"] as? String
                 let pattern = videoData["pattern"] as? String
                 
