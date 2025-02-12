@@ -288,6 +288,21 @@ class NotificationsViewController: UIViewController {
             break
         }
     }
+    
+    private func deleteNotification(_ notification: Notification) {
+        let db = Firestore.firestore()
+        db.collection("notifications").document(notification.id).delete { [weak self] error in
+            if let error = error {
+                print("Error deleting notification: \(error.localizedDescription)")
+            } else {
+                // Remove from local array and update UI
+                if let index = self?.notifications.firstIndex(where: { $0.id == notification.id }) {
+                    self?.notifications.remove(at: index)
+                    self?.updateUI(with: self?.notifications ?? [])
+                }
+            }
+        }
+    }
 }
 
 // MARK: - UICollectionViewDataSource, UICollectionViewDelegate
@@ -311,6 +326,7 @@ extension NotificationsViewController: UICollectionViewDataSource, UICollectionV
                 return UICollectionViewCell()
             }
             cell.configure(with: notification)
+            cell.delegate = self
             return cell
         }
     }
@@ -407,5 +423,12 @@ extension NotificationsViewController: FriendRequestCellDelegate {
                 self?.fetchNotifications()
             }
         }
+    }
+}
+
+// MARK: - NotificationCellDelegate
+extension NotificationsViewController: NotificationCellDelegate {
+    func didTapDelete(for notification: Notification) {
+        deleteNotification(notification)
     }
 } 

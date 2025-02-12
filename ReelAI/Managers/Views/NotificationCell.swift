@@ -1,11 +1,17 @@
 import UIKit
 import FirebaseFirestore
 
+// Add protocol at the top after imports
+protocol NotificationCellDelegate: AnyObject {
+    func didTapDelete(for notification: Notification)
+}
+
 class NotificationCell: UICollectionViewCell {
     static let identifier = "NotificationCell"
     
     // MARK: - Properties
     private var notification: Notification?
+    weak var delegate: NotificationCellDelegate?
     
     // MARK: - UI Components
     private let avatarImageView: UIImageView = {
@@ -34,6 +40,15 @@ class NotificationCell: UICollectionViewCell {
         return label
     }()
     
+    private let deleteButton: UIButton = {
+        let button = UIButton(type: .system)
+        let config = UIImage.SymbolConfiguration(pointSize: 16, weight: .medium)
+        button.setImage(UIImage(systemName: "xmark.circle.fill", withConfiguration: config), for: .normal)
+        button.tintColor = .systemGray3
+        button.translatesAutoresizingMaskIntoConstraints = false
+        return button
+    }()
+    
     // MARK: - Init
     override init(frame: CGRect) {
         super.init(frame: frame)
@@ -51,6 +66,7 @@ class NotificationCell: UICollectionViewCell {
         contentView.addSubview(avatarImageView)
         contentView.addSubview(contentLabel)
         contentView.addSubview(timeLabel)
+        contentView.addSubview(deleteButton)
         
         NSLayoutConstraint.activate([
             avatarImageView.leadingAnchor.constraint(equalTo: contentView.leadingAnchor, constant: 16),
@@ -60,12 +76,25 @@ class NotificationCell: UICollectionViewCell {
             
             contentLabel.topAnchor.constraint(equalTo: contentView.topAnchor, constant: 12),
             contentLabel.leadingAnchor.constraint(equalTo: avatarImageView.trailingAnchor, constant: 12),
-            contentLabel.trailingAnchor.constraint(equalTo: contentView.trailingAnchor, constant: -16),
+            contentLabel.trailingAnchor.constraint(equalTo: deleteButton.leadingAnchor, constant: -12),
             
             timeLabel.topAnchor.constraint(equalTo: contentLabel.bottomAnchor, constant: 4),
             timeLabel.leadingAnchor.constraint(equalTo: contentLabel.leadingAnchor),
-            timeLabel.bottomAnchor.constraint(equalTo: contentView.bottomAnchor, constant: -12)
+            timeLabel.bottomAnchor.constraint(equalTo: contentView.bottomAnchor, constant: -12),
+            
+            deleteButton.centerYAnchor.constraint(equalTo: contentView.centerYAnchor),
+            deleteButton.trailingAnchor.constraint(equalTo: contentView.trailingAnchor, constant: -16),
+            deleteButton.widthAnchor.constraint(equalToConstant: 30),
+            deleteButton.heightAnchor.constraint(equalToConstant: 30)
         ])
+        
+        deleteButton.addTarget(self, action: #selector(handleDelete), for: .touchUpInside)
+    }
+    
+    // MARK: - Actions
+    @objc private func handleDelete() {
+        guard let notification = notification else { return }
+        delegate?.didTapDelete(for: notification)
     }
     
     // MARK: - Configuration
