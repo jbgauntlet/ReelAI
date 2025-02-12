@@ -269,6 +269,10 @@ class FullScreenVideoCell: UICollectionViewCell {
         label.textColor = .white
         label.font = .systemFont(ofSize: 14, weight: .semibold)
         label.textAlignment = .center
+        label.layer.shadowColor = UIColor.black.cgColor
+        label.layer.shadowOffset = CGSize(width: 0, height: 1)
+        label.layer.shadowRadius = 2
+        label.layer.shadowOpacity = 0.3
         label.translatesAutoresizingMaskIntoConstraints = false
         return label
     }()
@@ -278,6 +282,10 @@ class FullScreenVideoCell: UICollectionViewCell {
         label.textColor = .white
         label.font = .systemFont(ofSize: 14, weight: .semibold)
         label.textAlignment = .center
+        label.layer.shadowColor = UIColor.black.cgColor
+        label.layer.shadowOffset = CGSize(width: 0, height: 1)
+        label.layer.shadowRadius = 2
+        label.layer.shadowOpacity = 0.3
         label.translatesAutoresizingMaskIntoConstraints = false
         return label
     }()
@@ -287,6 +295,10 @@ class FullScreenVideoCell: UICollectionViewCell {
         label.textColor = .white
         label.font = .systemFont(ofSize: 14, weight: .semibold)
         label.textAlignment = .center
+        label.layer.shadowColor = UIColor.black.cgColor
+        label.layer.shadowOffset = CGSize(width: 0, height: 1)
+        label.layer.shadowRadius = 2
+        label.layer.shadowOpacity = 0.3
         label.translatesAutoresizingMaskIntoConstraints = false
         return label
     }()
@@ -325,12 +337,26 @@ class FullScreenVideoCell: UICollectionViewCell {
         return view
     }()
     
+    private let infoStackView: UIStackView = {
+        let stackView = UIStackView()
+        stackView.axis = .vertical
+        stackView.spacing = 8
+        stackView.alignment = .leading
+        stackView.distribution = .fill
+        stackView.translatesAutoresizingMaskIntoConstraints = false
+        return stackView
+    }()
+    
     private let titleLabel: UILabel = {
         let label = UILabel()
         label.textColor = .white
         label.font = .systemFont(ofSize: 18, weight: .bold)
         label.numberOfLines = 1
         label.lineBreakMode = .byTruncatingTail
+        label.layer.shadowColor = UIColor.black.cgColor
+        label.layer.shadowOffset = CGSize(width: 0, height: 1)
+        label.layer.shadowRadius = 2
+        label.layer.shadowOpacity = 0.3
         label.translatesAutoresizingMaskIntoConstraints = false
         return label
     }()
@@ -338,9 +364,13 @@ class FullScreenVideoCell: UICollectionViewCell {
     private let captionLabel: UILabel = {
         let label = UILabel()
         label.textColor = .white
-        label.font = .systemFont(ofSize: 14, weight: .regular)
+        label.font = .systemFont(ofSize: 15, weight: .regular)
         label.numberOfLines = 2
         label.lineBreakMode = .byTruncatingTail
+        label.layer.shadowColor = UIColor.black.cgColor
+        label.layer.shadowOffset = CGSize(width: 0, height: 1)
+        label.layer.shadowRadius = 2
+        label.layer.shadowOpacity = 0.3
         label.translatesAutoresizingMaskIntoConstraints = false
         return label
     }()
@@ -348,9 +378,13 @@ class FullScreenVideoCell: UICollectionViewCell {
     private let tagsLabel: UILabel = {
         let label = UILabel()
         label.textColor = .white
-        label.font = .systemFont(ofSize: 14, weight: .regular)
+        label.font = .systemFont(ofSize: 15, weight: .regular)
         label.numberOfLines = 1
         label.lineBreakMode = .byTruncatingTail
+        label.layer.shadowColor = UIColor.black.cgColor
+        label.layer.shadowOffset = CGSize(width: 0, height: 1)
+        label.layer.shadowRadius = 2
+        label.layer.shadowOpacity = 0.3
         label.translatesAutoresizingMaskIntoConstraints = false
         return label
     }()
@@ -431,30 +465,23 @@ class FullScreenVideoCell: UICollectionViewCell {
     /// Sets up the info panel containing video title, caption, and tags
     private func setupInfoPanel() {
         contentView.addSubview(infoPanelView)
+        infoPanelView.addSubview(infoStackView)
         
-        // Add info panel components
-        infoPanelView.addSubview(titleLabel)
-        infoPanelView.addSubview(captionLabel)
-        infoPanelView.addSubview(tagsLabel)
+        // Add labels to stack view
+        infoStackView.addArrangedSubview(titleLabel)
+        infoStackView.addArrangedSubview(captionLabel)
+        infoStackView.addArrangedSubview(tagsLabel)
         
         // Configure info panel constraints
         NSLayoutConstraint.activate([
             infoPanelView.leadingAnchor.constraint(equalTo: contentView.leadingAnchor, constant: 16),
-            infoPanelView.bottomAnchor.constraint(equalTo: contentView.bottomAnchor, constant: -8),
+            infoPanelView.bottomAnchor.constraint(equalTo: contentView.bottomAnchor, constant: -24),
             infoPanelView.widthAnchor.constraint(equalToConstant: 300),
-            infoPanelView.heightAnchor.constraint(equalToConstant: 120),
             
-            titleLabel.topAnchor.constraint(equalTo: infoPanelView.topAnchor),
-            titleLabel.leadingAnchor.constraint(equalTo: infoPanelView.leadingAnchor),
-            titleLabel.trailingAnchor.constraint(equalTo: infoPanelView.trailingAnchor),
-            
-            captionLabel.topAnchor.constraint(equalTo: titleLabel.bottomAnchor, constant: 8),
-            captionLabel.leadingAnchor.constraint(equalTo: infoPanelView.leadingAnchor),
-            captionLabel.trailingAnchor.constraint(equalTo: infoPanelView.trailingAnchor),
-            
-            tagsLabel.topAnchor.constraint(equalTo: captionLabel.bottomAnchor, constant: 8),
-            tagsLabel.leadingAnchor.constraint(equalTo: infoPanelView.leadingAnchor),
-            tagsLabel.trailingAnchor.constraint(equalTo: infoPanelView.trailingAnchor)
+            infoStackView.topAnchor.constraint(equalTo: infoPanelView.topAnchor),
+            infoStackView.leadingAnchor.constraint(equalTo: infoPanelView.leadingAnchor),
+            infoStackView.trailingAnchor.constraint(equalTo: infoPanelView.trailingAnchor),
+            infoStackView.bottomAnchor.constraint(equalTo: infoPanelView.bottomAnchor)
         ])
     }
     
@@ -625,6 +652,10 @@ class FullScreenVideoCell: UICollectionViewCell {
         }
         
         // Update info panel
+        titleLabel.isHidden = video.title?.isEmpty ?? true
+        captionLabel.isHidden = video.caption?.isEmpty ?? true
+        tagsLabel.isHidden = video.tags?.isEmpty ?? true
+        
         titleLabel.text = video.title
         captionLabel.text = video.caption
         if let tags = video.tags {
@@ -1889,6 +1920,8 @@ extension VideoScrollContentViewController: UICollectionViewDataSourcePrefetchin
             
             // Skip if already prefetched
             if prefetchedAssets[video.id] != nil { continue }
+            
+            print("🔄 Starting prefetch for video \(video.id) at index \(indexPath.item)")
             
             // Create and load asset
             let asset = AVURLAsset(url: videoURL, options: [
