@@ -268,6 +268,15 @@ class PostVideoViewController: UIViewController {
             return
         }
         
+        // Check video duration
+        let asset = AVAsset(url: videoURL)
+        let duration = CMTimeGetSeconds(asset.duration)
+        if duration > 61.0 {
+            progressLabel.text = "Video must be 1 minute or less"
+            progressLabel.textColor = .systemRed
+            return
+        }
+        
         // Reset UI state
         titleTextField.layer.borderWidth = 0
         progressLabel.textColor = .gray

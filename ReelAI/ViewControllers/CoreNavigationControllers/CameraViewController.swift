@@ -11,6 +11,9 @@ class CameraViewController: UIViewController, UIImagePickerControllerDelegate, U
     private var movieFileOutput: AVCaptureMovieFileOutput?
     private var isRecording = false
     private var recordedVideoURL: URL?
+    private var recordingTimer: Timer?
+    private var recordingDuration: TimeInterval = 0
+    private let maxRecordingDuration: TimeInterval = 61.0 // 61 seconds to accommodate exact 1-minute videos
     
     // MARK: - UI Components
     private let previewView: UIView = {
@@ -90,6 +93,15 @@ class CameraViewController: UIViewController, UIImagePickerControllerDelegate, U
         return imageView
     }()
     
+    private let recordingTimeLabel: UILabel = {
+        let label = UILabel()
+        label.textColor = .white
+        label.font = .monospacedDigitSystemFont(ofSize: 14, weight: .medium)
+        label.text = "00:00"
+        label.translatesAutoresizingMaskIntoConstraints = false
+        return label
+    }()
+    
     // MARK: - Lifecycle
     override func viewDidLoad() {
         super.viewDidLoad()
@@ -123,6 +135,7 @@ class CameraViewController: UIViewController, UIImagePickerControllerDelegate, U
         view.addSubview(recordingIndicator)
         view.addSubview(nextButton)
         view.addSubview(galleryButton)
+        view.addSubview(recordingTimeLabel)
         galleryButton.addSubview(galleryThumbnail)
         
         NSLayoutConstraint.activate([
@@ -164,7 +177,10 @@ class CameraViewController: UIViewController, UIImagePickerControllerDelegate, U
             nextButton.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -16),
             nextButton.centerYAnchor.constraint(equalTo: captureButton.centerYAnchor),
             nextButton.widthAnchor.constraint(equalToConstant: 80),
-            nextButton.heightAnchor.constraint(equalToConstant: 50)
+            nextButton.heightAnchor.constraint(equalToConstant: 50),
+            
+            recordingTimeLabel.centerXAnchor.constraint(equalTo: recordingIndicator.centerXAnchor),
+            recordingTimeLabel.topAnchor.constraint(equalTo: recordingIndicator.bottomAnchor, constant: 8)
         ])
         
         captureButton.addTarget(self, action: #selector(handleCapture), for: .touchUpInside)
@@ -297,24 +313,52 @@ class CameraViewController: UIViewController, UIImagePickerControllerDelegate, U
             let fileUrl = paths[0].appendingPathComponent("video_\(Date().timeIntervalSince1970).mov")
             movieFileOutput.startRecording(to: fileUrl, recordingDelegate: self)
             
+            // Start recording timer
+            recordingDuration = 0
+            recordingTimer = Timer.scheduledTimer(withTimeInterval: 0.1, repeats: true) { [weak self] _ in
+                guard let self = self else { return }
+                self.recordingDuration += 0.1
+                
+                // Update time label
+                let minutes = Int(self.recordingDuration) / 60
+                let seconds = Int(self.recordingDuration) % 60
+                let tenths = Int((self.recordingDuration * 10).truncatingRemainder(dividingBy: 10))
+                self.recordingTimeLabel.text = String(format: "%02d:%02d.%01d", minutes, seconds, tenths)
+                
+                // Stop recording if max duration reached
+                if self.recordingDuration >= self.maxRecordingDuration {
+                    self.stopRecording()
+                }
+            }
+            
             // Update UI for recording state
             UIView.animate(withDuration: 0.3) {
                 self.captureButton.backgroundColor = .red
                 self.recordingIndicator.isHidden = false
                 self.nextButton.isHidden = true
+                self.recordingTimeLabel.isHidden = false
             }
         } else {
-            // Stop recording
-            movieFileOutput.stopRecording()
-            
-            // Update UI for stopped state
-            UIView.animate(withDuration: 0.3) {
-                self.captureButton.backgroundColor = .white
-                self.recordingIndicator.isHidden = true
-            }
+            stopRecording()
         }
         
         isRecording = !isRecording
+    }
+    
+    private func stopRecording() {
+        // Stop recording timer
+        recordingTimer?.invalidate()
+        recordingTimer = nil
+        
+        // Stop video recording
+        movieFileOutput?.stopRecording()
+        
+        // Update UI for stopped state
+        UIView.animate(withDuration: 0.3) {
+            self.captureButton.backgroundColor = .white
+            self.recordingIndicator.isHidden = true
+            self.recordingTimeLabel.isHidden = true
+        }
     }
     
     @objc private func handleFlipCamera() {
@@ -345,6 +389,21 @@ class CameraViewController: UIViewController, UIImagePickerControllerDelegate, U
         dismiss(animated: true)
         
         guard let videoURL = info[.mediaURL] as? URL else { return }
+        
+        // Check video duration
+        let asset = AVAsset(url: videoURL)
+        let duration = CMTimeGetSeconds(asset.duration)
+        
+        if duration > maxRecordingDuration {
+            let alert = UIAlertController(
+                title: "Video Too Long",
+                message: "Please select a video that is 1 minute or less in duration.",
+                preferredStyle: .alert
+            )
+            alert.addAction(UIAlertAction(title: "OK", style: .default))
+            present(alert, animated: true)
+            return
+        }
         
         // Navigate directly to PostVideoViewController with selected video
         let postVideoVC = PostVideoViewController(videoURL: videoURL)
