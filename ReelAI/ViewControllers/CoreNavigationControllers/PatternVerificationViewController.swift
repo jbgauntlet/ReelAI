@@ -8,6 +8,7 @@ class PatternVerificationViewController: UIViewController {
     private let pattern: String
     private var patternJson: [String: Any]
     private var editedJson: [String: Any]
+    var onCompletion: (() -> Void)?
     
     // MARK: - UI Components
     private let scrollView: UIScrollView = {
@@ -352,7 +353,9 @@ class PatternVerificationViewController: UIViewController {
                 alert.addAction(UIAlertAction(title: "OK", style: .default))
                 self?.present(alert, animated: true)
             } else {
-                self?.dismiss(animated: true)
+                self?.dismiss(animated: true) {
+                    self?.onCompletion?()
+                }
             }
         }
     }

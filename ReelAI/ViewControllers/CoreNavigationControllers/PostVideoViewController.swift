@@ -29,7 +29,7 @@ class PostVideoViewController: UIViewController {
     
     private let titleTextField: UITextField = {
         let tf = UITextField()
-        tf.placeholder = "Enter video title"
+        tf.placeholder = "Enter video title (required)"
         tf.backgroundColor = .systemGray6
         tf.layer.cornerRadius = 8
         tf.leftView = UIView(frame: CGRect(x: 0, y: 0, width: 10, height: 0))
@@ -107,6 +107,7 @@ class PostVideoViewController: UIViewController {
         button.titleLabel?.font = .systemFont(ofSize: 17, weight: .semibold)
         button.backgroundColor = .systemBlue
         button.setTitleColor(.white, for: .normal)
+        button.setTitleColor(.systemGray3, for: .disabled)
         button.layer.cornerRadius = 8
         button.translatesAutoresizingMaskIntoConstraints = false
         return button
@@ -258,8 +259,22 @@ class PostVideoViewController: UIViewController {
     }
     
     @objc private func handlePost() {
+        // Validate title
+        guard let title = titleTextField.text?.trimmingCharacters(in: .whitespacesAndNewlines), !title.isEmpty else {
+            progressLabel.text = "Please enter a title for your video"
+            progressLabel.textColor = .systemRed
+            titleTextField.layer.borderColor = UIColor.systemRed.cgColor
+            titleTextField.layer.borderWidth = 1
+            return
+        }
+        
+        // Reset UI state
+        titleTextField.layer.borderWidth = 0
+        progressLabel.textColor = .gray
+        
         // Disable post button immediately
         postButton.isEnabled = false
+        postButton.backgroundColor = .systemGray4
         compressVideo(videoURL)
     }
     
@@ -506,35 +521,44 @@ class PostVideoViewController: UIViewController {
         case "pending":
             progressLabel.text = "Waiting to begin transcription..."
             postButton.isEnabled = false
+            postButton.backgroundColor = .systemGray4
         case "processing":
             progressLabel.text = "Transcribing video..."
             postButton.isEnabled = false
+            postButton.backgroundColor = .systemGray4
         case "completed":
             if let pattern = pattern {
                 switch parseStatus {
                 case "pending":
                     progressLabel.text = "Transcription complete. Analyzing \(pattern) pattern..."
                     postButton.isEnabled = false
+                    postButton.backgroundColor = .systemGray4
                 case "completed":
                     progressLabel.text = "Pattern analysis complete!"
-                    postButton.isEnabled = true
+                    postButton.isEnabled = false
+                    postButton.backgroundColor = .systemGray4
                 case "failed":
                     progressLabel.text = "Transcription complete, but pattern analysis failed"
-                    postButton.isEnabled = true
+                    postButton.isEnabled = false
+                    postButton.backgroundColor = .systemGray4
                 default:
                     progressLabel.text = "Transcription complete!"
-                    postButton.isEnabled = true
+                    postButton.isEnabled = false
+                    postButton.backgroundColor = .systemGray4
                 }
             } else {
                 progressLabel.text = "Transcription complete!"
-                postButton.isEnabled = true
+                postButton.isEnabled = false
+                postButton.backgroundColor = .systemGray4
             }
         case "error":
             progressLabel.text = "Transcription failed"
-            postButton.isEnabled = true
+            postButton.isEnabled = false
+            postButton.backgroundColor = .systemGray4
         default:
             progressLabel.text = "Unknown status"
-            postButton.isEnabled = true
+            postButton.isEnabled = false
+            postButton.backgroundColor = .systemGray4
         }
     }
     
@@ -546,23 +570,70 @@ class PostVideoViewController: UIViewController {
                 patternJson: patternJson
             )
             verificationVC.modalPresentationStyle = .fullScreen
+            verificationVC.onCompletion = { [weak self] in
+                self?.handleUploadCompletion()
+            }
             self.present(verificationVC, animated: true)
         }
     }
     
     private func handleTranscriptionError(error: String?) {
         progressLabel.text = "Error: \(error ?? "Unknown error")"
-        // Re-enable post button on error
-        postButton.isEnabled = true
+        // Keep post button disabled on error
+        postButton.isEnabled = false
     }
     
     private func handleUploadCompletion() {
+        print("🏁 Starting handleUploadCompletion")
         progressLabel.text = "Upload and processing complete!"
-        // Only re-enable post button if no transcription was requested
-        if !transcribeToggle.isOn {
-            postButton.isEnabled = true
+        
+        // Clean up any remaining listeners
+        print("🧹 Cleaning up video status listener")
+        videoStatusListener?.remove()
+        
+        // Clean up video files
+        print("🗑️ Cleaning up video files")
+        cleanupVideoFiles()
+        
+        print("🔄 Attempting to navigate back to home feed")
+        
+        // First check if we're in a navigation controller
+        if let navigationController = self.navigationController {
+            print("📱 Found navigation controller, popping to root")
+            navigationController.popToRootViewController(animated: true)
+            
+            // After popping, find the tab bar controller and reset to home feed
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                if let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
+                   let window = windowScene.windows.first,
+                   let tabBarController = window.rootViewController as? UITabBarController {
+                    print("🏠 Resetting to home feed tab")
+                    tabBarController.selectedIndex = 0
+                }
+            }
+        } else {
+            // Fallback to previous dismissal logic for modal presentation
+            print("🔍 No navigation controller found, trying tab bar controller")
+            if let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
+               let window = windowScene.windows.first,
+               let tabBarController = window.rootViewController as? UITabBarController {
+                print("📱 Found tab bar controller")
+                if let presented = tabBarController.presentedViewController {
+                    print("🔼 Dismissing presented view controller")
+                    presented.dismiss(animated: true) {
+                        print("✅ Successfully dismissed presented view controller")
+                        print("🏠 Resetting to home feed tab")
+                        tabBarController.selectedIndex = 0
+                    }
+                } else {
+                    print("🏠 No presented view controller, resetting to home feed tab")
+                    tabBarController.selectedIndex = 0
+                }
+            } else {
+                print("❌ Could not find navigation or tab bar controller")
+            }
         }
-        navigationController?.popViewController(animated: true)
+        print("🎉 handleUploadCompletion completed")
     }
     
     private func cleanupVideoFiles() {
