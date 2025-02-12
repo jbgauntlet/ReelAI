@@ -184,7 +184,15 @@ class FullScreenVideoCell: UICollectionViewCell {
     // MARK: - Action Bar UI Components
     
     /// Container view for action buttons (like, comment, share)
-    private let actionBarView: UIView = {
+    private let actionBarContainer: UIView = {
+        let view = UIView()
+        view.backgroundColor = .clear
+        view.translatesAutoresizingMaskIntoConstraints = false
+        return view
+    }()
+    
+    /// Container for transcription and pattern buttons
+    private let specialActionsContainer: UIView = {
         let view = UIView()
         view.backgroundColor = .clear
         view.translatesAutoresizingMaskIntoConstraints = false
@@ -265,6 +273,25 @@ class FullScreenVideoCell: UICollectionViewCell {
         label.textAlignment = .center
         label.translatesAutoresizingMaskIntoConstraints = false
         return label
+    }()
+    
+    // Add new UI components for transcription and pattern
+    private let transcriptionButton: UIButton = {
+        let button = UIButton()
+        let config = UIImage.SymbolConfiguration(pointSize: 30)
+        button.setImage(UIImage(systemName: "text.bubble", withConfiguration: config), for: .normal)
+        button.tintColor = .white
+        button.translatesAutoresizingMaskIntoConstraints = false
+        return button
+    }()
+    
+    private let patternButton: UIButton = {
+        let button = UIButton()
+        let config = UIImage.SymbolConfiguration(pointSize: 30)
+        button.setImage(UIImage(systemName: "list.bullet", withConfiguration: config), for: .normal)
+        button.tintColor = .white
+        button.translatesAutoresizingMaskIntoConstraints = false
+        return button
     }()
     
     // MARK: - Info Panel UI Components
@@ -410,52 +437,73 @@ class FullScreenVideoCell: UICollectionViewCell {
     
     /// Sets up the action bar containing interaction buttons
     private func setupActionBar() {
-        contentView.addSubview(actionBarView)
+        contentView.addSubview(specialActionsContainer)
+        contentView.addSubview(actionBarContainer)
         
-        // Add action buttons
-        actionBarView.addSubview(creatorAvatarButton)
-        actionBarView.addSubview(likeButton)
-        actionBarView.addSubview(commentButton)
-        actionBarView.addSubview(bookmarkButton)
-        actionBarView.addSubview(shareButton)
+        // Add special action buttons to their container
+        specialActionsContainer.addSubview(transcriptionButton)
+        specialActionsContainer.addSubview(patternButton)
         
-        // Add count labels
-        actionBarView.addSubview(likeCountLabel)
-        actionBarView.addSubview(commentCountLabel)
-        actionBarView.addSubview(bookmarkCountLabel)
+        // Add regular action buttons to action bar
+        actionBarContainer.addSubview(creatorAvatarButton)
+        actionBarContainer.addSubview(likeButton)
+        actionBarContainer.addSubview(likeCountLabel)
+        actionBarContainer.addSubview(commentButton)
+        actionBarContainer.addSubview(commentCountLabel)
+        actionBarContainer.addSubview(bookmarkButton)
+        actionBarContainer.addSubview(bookmarkCountLabel)
+        actionBarContainer.addSubview(shareButton)
         
-        // Configure action bar constraints
+        // Set up constraints for special actions container
         NSLayoutConstraint.activate([
-            actionBarView.trailingAnchor.constraint(equalTo: contentView.trailingAnchor, constant: -8),
-            actionBarView.bottomAnchor.constraint(equalTo: contentView.bottomAnchor, constant: -8),
-            actionBarView.widthAnchor.constraint(equalToConstant: 80),
-            actionBarView.heightAnchor.constraint(equalToConstant: 400),
+            specialActionsContainer.trailingAnchor.constraint(equalTo: contentView.trailingAnchor, constant: -10),
+            specialActionsContainer.topAnchor.constraint(equalTo: contentView.safeAreaLayoutGuide.topAnchor, constant: 10),
+            specialActionsContainer.widthAnchor.constraint(equalToConstant: 80),
             
-            creatorAvatarButton.topAnchor.constraint(equalTo: actionBarView.topAnchor),
-            creatorAvatarButton.centerXAnchor.constraint(equalTo: actionBarView.centerXAnchor),
+            transcriptionButton.topAnchor.constraint(equalTo: specialActionsContainer.topAnchor),
+            transcriptionButton.centerXAnchor.constraint(equalTo: specialActionsContainer.centerXAnchor),
+            transcriptionButton.widthAnchor.constraint(equalToConstant: 40),
+            transcriptionButton.heightAnchor.constraint(equalToConstant: 40),
+            
+            patternButton.topAnchor.constraint(equalTo: transcriptionButton.bottomAnchor, constant: 20),
+            patternButton.centerXAnchor.constraint(equalTo: specialActionsContainer.centerXAnchor),
+            patternButton.widthAnchor.constraint(equalToConstant: 40),
+            patternButton.heightAnchor.constraint(equalToConstant: 40),
+            patternButton.bottomAnchor.constraint(equalTo: specialActionsContainer.bottomAnchor)
+        ])
+        
+        // Set up constraints for main action bar
+        NSLayoutConstraint.activate([
+            actionBarContainer.trailingAnchor.constraint(equalTo: contentView.trailingAnchor, constant: -10),
+            actionBarContainer.bottomAnchor.constraint(equalTo: contentView.bottomAnchor, constant: -50),
+            actionBarContainer.widthAnchor.constraint(equalToConstant: 80),
+            
+            creatorAvatarButton.topAnchor.constraint(equalTo: actionBarContainer.topAnchor),
+            creatorAvatarButton.centerXAnchor.constraint(equalTo: actionBarContainer.centerXAnchor),
             creatorAvatarButton.widthAnchor.constraint(equalToConstant: 50),
             creatorAvatarButton.heightAnchor.constraint(equalToConstant: 50),
             
             likeButton.topAnchor.constraint(equalTo: creatorAvatarButton.bottomAnchor, constant: 20),
-            likeButton.centerXAnchor.constraint(equalTo: actionBarView.centerXAnchor),
+            likeButton.centerXAnchor.constraint(equalTo: actionBarContainer.centerXAnchor),
             
             likeCountLabel.topAnchor.constraint(equalTo: likeButton.bottomAnchor, constant: 4),
-            likeCountLabel.centerXAnchor.constraint(equalTo: actionBarView.centerXAnchor),
+            likeCountLabel.centerXAnchor.constraint(equalTo: actionBarContainer.centerXAnchor),
             
             commentButton.topAnchor.constraint(equalTo: likeCountLabel.bottomAnchor, constant: 20),
-            commentButton.centerXAnchor.constraint(equalTo: actionBarView.centerXAnchor),
+            commentButton.centerXAnchor.constraint(equalTo: actionBarContainer.centerXAnchor),
             
             commentCountLabel.topAnchor.constraint(equalTo: commentButton.bottomAnchor, constant: 4),
-            commentCountLabel.centerXAnchor.constraint(equalTo: actionBarView.centerXAnchor),
+            commentCountLabel.centerXAnchor.constraint(equalTo: actionBarContainer.centerXAnchor),
             
             bookmarkButton.topAnchor.constraint(equalTo: commentCountLabel.bottomAnchor, constant: 20),
-            bookmarkButton.centerXAnchor.constraint(equalTo: actionBarView.centerXAnchor),
+            bookmarkButton.centerXAnchor.constraint(equalTo: actionBarContainer.centerXAnchor),
             
             bookmarkCountLabel.topAnchor.constraint(equalTo: bookmarkButton.bottomAnchor, constant: 4),
-            bookmarkCountLabel.centerXAnchor.constraint(equalTo: actionBarView.centerXAnchor),
+            bookmarkCountLabel.centerXAnchor.constraint(equalTo: actionBarContainer.centerXAnchor),
             
             shareButton.topAnchor.constraint(equalTo: bookmarkCountLabel.bottomAnchor, constant: 20),
-            shareButton.centerXAnchor.constraint(equalTo: actionBarView.centerXAnchor)
+            shareButton.centerXAnchor.constraint(equalTo: actionBarContainer.centerXAnchor),
+            shareButton.bottomAnchor.constraint(equalTo: actionBarContainer.bottomAnchor)
         ])
         
         // Configure button actions
@@ -464,6 +512,8 @@ class FullScreenVideoCell: UICollectionViewCell {
         commentButton.addTarget(self, action: #selector(commentTapped), for: .touchUpInside)
         bookmarkButton.addTarget(self, action: #selector(bookmarkTapped), for: .touchUpInside)
         shareButton.addTarget(self, action: #selector(shareTapped), for: .touchUpInside)
+        transcriptionButton.addTarget(self, action: #selector(transcriptionTapped), for: .touchUpInside)
+        patternButton.addTarget(self, action: #selector(patternTapped), for: .touchUpInside)
     }
     
     /// Handles tap gesture for play/pause
@@ -559,6 +609,10 @@ class FullScreenVideoCell: UICollectionViewCell {
         } else {
             tagsLabel.text = ""
         }
+        
+        // Update transcription and pattern button visibility
+        transcriptionButton.isHidden = !video.doTranscribe || video.transcriptionStatus != .completed
+        patternButton.isHidden = video.pattern == nil || video.parseStatus != .completed
     }
     
     /// Formats a number for display (e.g., 1000 -> 1K)
@@ -898,6 +952,19 @@ class FullScreenVideoCell: UICollectionViewCell {
             slider.transform = .identity
         }
     }
+    
+    @objc private func transcriptionTapped() {
+        guard let video = currentVideo,
+              let transcription = video.transcription else { return }
+        delegate?.didTapTranscription(for: video, transcription: transcription)
+    }
+    
+    @objc private func patternTapped() {
+        guard let video = currentVideo,
+              let pattern = video.pattern,
+              let patternJson = video.patternJson else { return }
+        delegate?.didTapPattern(for: video, pattern: pattern, patternJson: patternJson)
+    }
 }
 
 // MARK: - FullScreenVideoCellDelegate Protocol
@@ -913,6 +980,12 @@ protocol FullScreenVideoCellDelegate: AnyObject {
     func didTapBookmark(for video: Video)
     /// Called when the share button is tapped
     func didTapShare(for video: Video)
+    
+    /// Called when the transcription button is tapped
+    func didTapTranscription(for video: Video, transcription: String)
+    
+    /// Called when the pattern button is tapped
+    func didTapPattern(for video: Video, pattern: String, patternJson: [String: Any])
 }
 
 // MARK: - VideoLoadingWindow Implementation
@@ -1724,6 +1797,25 @@ extension VideoScrollContentViewController: FullScreenVideoCellDelegate {
         let items = [URL(string: video.storagePath)].compactMap { $0 }
         let ac = UIActivityViewController(activityItems: items, applicationActivities: nil)
         present(ac, animated: true)
+    }
+    
+    /// Handles tapping the transcription button
+    /// - Parameter video: The video whose transcription was tapped
+    /// - Parameter transcription: The transcription text
+    func didTapTranscription(for video: Video, transcription: String) {
+        let transcriptionVC = TranscriptionDisplayViewController(transcription: transcription)
+        transcriptionVC.modalPresentationStyle = .overFullScreen
+        present(transcriptionVC, animated: true)
+    }
+    
+    /// Handles tapping the pattern button
+    /// - Parameter video: The video whose pattern was tapped
+    /// - Parameter pattern: The pattern text
+    /// - Parameter patternJson: The JSON representation of the pattern
+    func didTapPattern(for video: Video, pattern: String, patternJson: [String: Any]) {
+        let patternVC = PatternDisplayViewController(pattern: pattern, patternJson: patternJson)
+        patternVC.modalPresentationStyle = .overFullScreen
+        present(patternVC, animated: true)
     }
 }
 

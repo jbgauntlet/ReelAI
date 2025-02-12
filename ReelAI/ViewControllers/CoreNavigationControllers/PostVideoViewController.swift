@@ -17,6 +17,7 @@ class PostVideoViewController: UIViewController {
     private let videoURL: URL
     private var compressedVideoURL: URL?
     private var tags: [String] = []
+    private var videoStatusListener: ListenerRegistration?
     
     // MARK: - UI Components
     private let videoPreviewView: UIView = {
@@ -76,6 +77,28 @@ class PostVideoViewController: UIViewController {
         label.textAlignment = .left
         label.translatesAutoresizingMaskIntoConstraints = false
         return label
+    }()
+    
+    private let transcribeToggle: UISwitch = {
+        let toggle = UISwitch()
+        toggle.translatesAutoresizingMaskIntoConstraints = false
+        return toggle
+    }()
+    
+    private let transcribeLabel: UILabel = {
+        let label = UILabel()
+        label.text = "Transcribe Video"
+        label.translatesAutoresizingMaskIntoConstraints = false
+        return label
+    }()
+    
+    private let patternSegmentControl: UISegmentedControl = {
+        let items = ["None", "Workout", "Recipe", "Tutorial"]
+        let sc = UISegmentedControl(items: items)
+        sc.selectedSegmentIndex = 0
+        sc.isEnabled = false
+        sc.translatesAutoresizingMaskIntoConstraints = false
+        return sc
     }()
     
     private let postButton: UIButton = {
@@ -146,6 +169,9 @@ class PostVideoViewController: UIViewController {
         view.addSubview(tagTextField)
         view.addSubview(addTagButton)
         view.addSubview(tagsLabel)
+        view.addSubview(transcribeLabel)
+        view.addSubview(transcribeToggle)
+        view.addSubview(patternSegmentControl)
         view.addSubview(postButton)
         view.addSubview(progressLabel)
         
@@ -184,7 +210,17 @@ class PostVideoViewController: UIViewController {
             tagsLabel.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: 16),
             tagsLabel.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -16),
             
-            postButton.topAnchor.constraint(equalTo: tagsLabel.bottomAnchor, constant: 20),
+            transcribeLabel.topAnchor.constraint(equalTo: tagsLabel.bottomAnchor, constant: 20),
+            transcribeLabel.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: 16),
+            
+            transcribeToggle.centerYAnchor.constraint(equalTo: transcribeLabel.centerYAnchor),
+            transcribeToggle.leadingAnchor.constraint(equalTo: transcribeLabel.trailingAnchor, constant: 10),
+            
+            patternSegmentControl.topAnchor.constraint(equalTo: transcribeLabel.bottomAnchor, constant: 12),
+            patternSegmentControl.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: 16),
+            patternSegmentControl.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -16),
+            
+            postButton.topAnchor.constraint(equalTo: patternSegmentControl.bottomAnchor, constant: 20),
             postButton.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: 16),
             postButton.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -16),
             postButton.heightAnchor.constraint(equalToConstant: 44),
@@ -198,6 +234,7 @@ class PostVideoViewController: UIViewController {
         postButton.addTarget(self, action: #selector(handlePost), for: .touchUpInside)
         backButton.addTarget(self, action: #selector(handleBack), for: .touchUpInside)
         addTagButton.addTarget(self, action: #selector(handleAddTag), for: .touchUpInside)
+        transcribeToggle.addTarget(self, action: #selector(handleTranscribeToggle), for: .valueChanged)
         
         updateTagsLabel()
     }
@@ -227,6 +264,13 @@ class PostVideoViewController: UIViewController {
     @objc private func handleBack() {
         cleanupVideoFiles()
         navigationController?.popViewController(animated: true)
+    }
+    
+    @objc private func handleTranscribeToggle() {
+        patternSegmentControl.isEnabled = transcribeToggle.isOn
+        if !transcribeToggle.isOn {
+            patternSegmentControl.selectedSegmentIndex = 0
+        }
     }
     
     private func compressVideo(_ videoURL: URL) {
@@ -297,47 +341,57 @@ class PostVideoViewController: UIViewController {
         
         uploadTask.observe(.success) { [weak self] _ in
             guard let self = self else { return }
-            print("✅ Video upload to Storage successful")
+            print("✅ Video upload completed")
             
-            videoRef.downloadURL { url, error in
-                if let error = error {
-                    print("❌ Error getting download URL: \(error.localizedDescription)")
-                    self.progressLabel.text = "Error getting download URL: \(error.localizedDescription)"
+            videoRef.downloadURL { [weak self] url, error in
+                guard let self = self,
+                      let downloadURL = url else {
+                    print("❌ Error getting download URL: \(error?.localizedDescription ?? "Unknown error")")
                     return
                 }
                 
-                guard let downloadURL = url else {
-                    print("❌ Download URL is nil")
-                    self.progressLabel.text = "Error: couldn't get download URL"
-                    return
-                }
-                
-                print("🔗 Got download URL: \(downloadURL.absoluteString)")
-                self.saveToFirestore(videoId: videoId, videoUrl: downloadURL.absoluteString)
+                self.saveVideoMetadata(videoId: videoId, downloadURL: downloadURL)
             }
         }
         
         uploadTask.observe(.failure) { [weak self] snapshot in
+            guard let self = self else { return }
             print("❌ Upload failed: \(snapshot.error?.localizedDescription ?? "Unknown error")")
-            self?.progressLabel.text = "Upload failed: \(snapshot.error?.localizedDescription ?? "")"
+            self.progressLabel.text = "Upload failed: \(snapshot.error?.localizedDescription ?? "Unknown error")"
         }
     }
     
-    private func saveToFirestore(videoId: String, videoUrl: String) {
+    private func saveVideoMetadata(videoId: String, downloadURL: URL) {
         guard let userId = Auth.auth().currentUser?.uid else { return }
         
-        print("💾 Saving video metadata to Firestore...")
-        print("📝 Video ID: \(videoId)")
-        print("👤 Creator ID: \(userId)")
-        print("🔗 Storage Path: \(videoUrl)")
-        
         let db = Firestore.firestore()
+        
+        // Get pattern if selected
+        let pattern: String?
+        if transcribeToggle.isOn && patternSegmentControl.selectedSegmentIndex > 0 {
+            switch patternSegmentControl.selectedSegmentIndex {
+            case 1: pattern = "workout"
+            case 2: pattern = "recipe"
+            case 3: pattern = "tutorial"
+            default: pattern = nil
+            }
+        } else {
+            pattern = nil
+        }
+        
         let videoData: [String: Any] = [
-            "storage_path": videoUrl,
             "creator_id": userId,
+            "storage_path": downloadURL.absoluteString,
             "title": titleTextField.text ?? "",
             "caption": captionTextField.text ?? "",
             "tags": tags,
+            
+            // Transcription fields
+            "do_transcribe": transcribeToggle.isOn,
+            "transcriptionStatus": TranscriptionStatus.pending.rawValue,
+            
+            // Pattern fields
+            "pattern": pattern as Any,
             
             // Counters
             "views_count": 0,
@@ -359,19 +413,124 @@ class PostVideoViewController: UIViewController {
             } else {
                 print("✅ Successfully saved video metadata to Firestore")
                 print("📊 Video data: \(videoData)")
-                self.progressLabel.text = "Upload complete!"
-                self.postButton.isEnabled = false
-                self.postButton.alpha = 0.5
                 
-                // Clean up video files and navigate back
-                self.cleanupVideoFiles()
-                
-                // Navigate back to the main feed after successful upload
-                DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
-                    self.navigationController?.popToRootViewController(animated: true)
+                if self.transcribeToggle.isOn {
+                    // Start listening for status updates
+                    self.listenToVideoStatus(videoId: videoId)
+                } else {
+                    // Complete immediately if no transcription
+                    self.handleUploadCompletion()
                 }
             }
         }
+    }
+    
+    // MARK: - Status Monitoring
+    private func listenToVideoStatus(videoId: String) {
+        let db = Firestore.firestore()
+        
+        // Clean up any existing listener
+        videoStatusListener?.remove()
+        
+        // Set up new listener
+        videoStatusListener = db.collection("videos").document(videoId)
+            .addSnapshotListener { [weak self] snapshot, error in
+                guard let self = self,
+                      let document = snapshot,
+                      let videoData = document.data() else {
+                    return
+                }
+                
+                // Get the statuses
+                let transcriptionStatus = videoData["transcriptionStatus"] as? String ?? ""
+                let parseStatus = videoData["parse_status"] as? String
+                let pattern = videoData["pattern"] as? String
+                
+                // Update UI based on status
+                self.updateStatusUI(
+                    transcriptionStatus: transcriptionStatus,
+                    parseStatus: parseStatus,
+                    pattern: pattern
+                )
+                
+                // If everything is complete, navigate to verification if needed
+                if transcriptionStatus == "completed" {
+                    if let pattern = pattern,
+                       let parseStatus = parseStatus,
+                       parseStatus == "completed",
+                       let patternJson = videoData["pattern_json"] as? [String: Any] {
+                        // Clean up listener
+                        self.videoStatusListener?.remove()
+                        
+                        // Navigate to pattern verification
+                        self.navigateToPatternVerification(
+                            videoId: videoId,
+                            pattern: pattern,
+                            patternJson: patternJson
+                        )
+                    } else {
+                        // Just transcription was requested, clean up and finish
+                        self.videoStatusListener?.remove()
+                        self.handleUploadCompletion()
+                    }
+                } else if transcriptionStatus == "error" {
+                    // Handle error case
+                    self.handleTranscriptionError(
+                        error: videoData["transcription_error"] as? String
+                    )
+                }
+            }
+    }
+    
+    private func updateStatusUI(transcriptionStatus: String, parseStatus: String?, pattern: String?) {
+        switch transcriptionStatus {
+        case "pending":
+            progressLabel.text = "Waiting to begin transcription..."
+        case "processing":
+            progressLabel.text = "Transcribing video..."
+        case "completed":
+            if let pattern = pattern {
+                switch parseStatus {
+                case "pending":
+                    progressLabel.text = "Transcription complete. Analyzing \(pattern) pattern..."
+                case "completed":
+                    progressLabel.text = "Pattern analysis complete!"
+                case "failed":
+                    progressLabel.text = "Transcription complete, but pattern analysis failed"
+                default:
+                    progressLabel.text = "Transcription complete!"
+                }
+            } else {
+                progressLabel.text = "Transcription complete!"
+            }
+        case "error":
+            progressLabel.text = "Transcription failed"
+        default:
+            progressLabel.text = "Unknown status"
+        }
+    }
+    
+    private func navigateToPatternVerification(videoId: String, pattern: String, patternJson: [String: Any]) {
+        DispatchQueue.main.async {
+            let verificationVC = PatternVerificationViewController(
+                videoId: videoId,
+                pattern: pattern,
+                patternJson: patternJson
+            )
+            verificationVC.modalPresentationStyle = .fullScreen
+            self.present(verificationVC, animated: true)
+        }
+    }
+    
+    private func handleTranscriptionError(error: String?) {
+        progressLabel.text = "Error: \(error ?? "Unknown error")"
+        postButton.isEnabled = true
+    }
+    
+    private func handleUploadCompletion() {
+        progressLabel.text = "Upload and processing complete!"
+        postButton.isEnabled = false
+        navigationController?.popViewController(animated: true)
     }
     
     private func cleanupVideoFiles() {

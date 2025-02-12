@@ -24,6 +24,14 @@ class Video: Identifiable {
     // Transcription
     var transcription: String?
     var transcriptionStatus: TranscriptionStatus
+    var transcriptionError: String?
+    var doTranscribe: Bool
+    
+    // Pattern
+    var pattern: String?
+    var parseStatus: ParseStatus?
+    var parseError: String?
+    var patternJson: [String: Any]?
     
     // Counters
     var viewsCount: Int
@@ -53,6 +61,12 @@ class Video: Identifiable {
          tags: [String]? = nil,
          transcription: String? = nil,
          transcriptionStatus: TranscriptionStatus = .pending,
+         transcriptionError: String? = nil,
+         doTranscribe: Bool = false,
+         pattern: String? = nil,
+         parseStatus: ParseStatus? = nil,
+         parseError: String? = nil,
+         patternJson: [String: Any]? = nil,
          viewsCount: Int = 0,
          likesCount: Int = 0,
          commentsCount: Int = 0,
@@ -67,6 +81,12 @@ class Video: Identifiable {
         self.tags = tags
         self.transcription = transcription
         self.transcriptionStatus = transcriptionStatus
+        self.transcriptionError = transcriptionError
+        self.doTranscribe = doTranscribe
+        self.pattern = pattern
+        self.parseStatus = parseStatus
+        self.parseError = parseError
+        self.patternJson = patternJson
         self.viewsCount = viewsCount
         self.likesCount = likesCount
         self.commentsCount = commentsCount
@@ -93,7 +113,13 @@ class Video: Identifiable {
         self.title = data["title"] as? String
         self.tags = data["tags"] as? [String]
         self.transcription = data["transcription"] as? String
-        self.transcriptionStatus = TranscriptionStatus(rawValue: data["transcription_status"] as? String ?? "") ?? .pending
+        self.transcriptionStatus = TranscriptionStatus(rawValue: data["transcriptionStatus"] as? String ?? "") ?? .pending
+        self.transcriptionError = data["transcription_error"] as? String
+        self.doTranscribe = data["do_transcribe"] as? Bool ?? false
+        self.pattern = data["pattern"] as? String
+        self.parseStatus = ParseStatus(rawValue: data["parse_status"] as? String ?? "")
+        self.parseError = data["parse_error"] as? String
+        self.patternJson = data["pattern_json"] as? [String: Any]
         self.createdAt = createdAtTimestamp.dateValue()
         self.viewsCount = (data["views_count"] as? Int) ?? 0
         self.likesCount = (data["likes_count"] as? Int) ?? 0
@@ -168,7 +194,8 @@ class Video: Identifiable {
             "bookmarks_count": bookmarksCount,
             "created_at": Timestamp(date: createdAt),
             "updated_at": Timestamp(date: updatedAt),
-            "transcription_status": transcriptionStatus.rawValue
+            "transcriptionStatus": transcriptionStatus.rawValue,
+            "do_transcribe": doTranscribe
         ]
         
         // Add optional fields if they exist
@@ -176,6 +203,11 @@ class Video: Identifiable {
         if let title = title { data["title"] = title }
         if let tags = tags { data["tags"] = tags }
         if let transcription = transcription { data["transcription"] = transcription }
+        if let transcriptionError = transcriptionError { data["transcription_error"] = transcriptionError }
+        if let pattern = pattern { data["pattern"] = pattern }
+        if let parseStatus = parseStatus { data["parse_status"] = parseStatus.rawValue }
+        if let parseError = parseError { data["parse_error"] = parseError }
+        if let patternJson = patternJson { data["pattern_json"] = patternJson }
         
         return data
     }
@@ -184,7 +216,14 @@ class Video: Identifiable {
 // MARK: - TranscriptionStatus
 enum TranscriptionStatus: String {
     case pending
-    case inProgress
+    case processing
+    case completed
+    case failed
+}
+
+// MARK: - ParseStatus
+enum ParseStatus: String {
+    case pending
     case completed
     case failed
 } 

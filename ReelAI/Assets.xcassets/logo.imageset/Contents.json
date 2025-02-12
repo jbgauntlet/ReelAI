@@ -1,17 +1,17 @@
 {
   "images" : [
     {
-      "filename" : "reelai-icon-1x.png",
+      "filename" : "quiktok-logo-iconx100.png",
       "idiom" : "universal",
       "scale" : "1x"
     },
     {
-      "filename" : "reelai-icon-2x.png",
+      "filename" : "quiktok-logo-iconx200.png",
       "idiom" : "universal",
       "scale" : "2x"
     },
     {
-      "filename" : "reelai-icon-3x.png",
+      "filename" : "quiktok-logo-iconx300.png",
       "idiom" : "universal",
       "scale" : "3x"
     }

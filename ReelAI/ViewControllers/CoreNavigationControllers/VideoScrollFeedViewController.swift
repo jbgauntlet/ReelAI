@@ -543,4 +543,16 @@ extension VideoScrollFeedViewController: FullScreenVideoCellDelegate {
         let ac = UIActivityViewController(activityItems: items, applicationActivities: nil)
         present(ac, animated: true)
     }
+    
+    func didTapTranscription(for video: Video, transcription: String) {
+        let transcriptionVC = TranscriptionDisplayViewController(transcription: transcription)
+        transcriptionVC.modalPresentationStyle = .overFullScreen
+        present(transcriptionVC, animated: true)
+    }
+    
+    func didTapPattern(for video: Video, pattern: String, patternJson: [String: Any]) {
+        let patternVC = PatternDisplayViewController(pattern: pattern, patternJson: patternJson)
+        patternVC.modalPresentationStyle = .overFullScreen
+        present(patternVC, animated: true)
+    }
 }
