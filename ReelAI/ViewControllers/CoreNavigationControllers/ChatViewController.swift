@@ -216,10 +216,11 @@ class ChatViewController: UIViewController {
     
     private func setupNavigationBar() {
         navigationController?.setNavigationBarHidden(true, animated: false)
+        backButton.addTarget(self, action: #selector(handleBack), for: .touchUpInside)
         
         // Configure user info
         if let otherUser = conversation.otherUserInfo {
-            usernameLabel.text = otherUser.username ?? "User"
+            usernameLabel.text = otherUser.name ?? otherUser.username ?? "User"
             statusLabel.text = "Active now" // You can update this based on user's actual status
             
             if let avatarUrl = otherUser.avatar,

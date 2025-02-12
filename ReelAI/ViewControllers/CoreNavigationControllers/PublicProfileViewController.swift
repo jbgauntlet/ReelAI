@@ -755,51 +755,73 @@ class PublicProfileViewController: UIViewController {
         
         let db = Firestore.firestore()
         
-        // Check if a conversation already exists
-        db.collection("conversations")
-            .whereField("participants", arrayContains: currentUserId)
-            .getDocuments { [weak self] snapshot, error in
-                guard let self = self else { return }
-                
-                if let error = error {
-                    print("Error checking existing conversations: \(error)")
-                    return
-                }
-                
-                // Look for an existing conversation with these participants
-                if let existingConversation = snapshot?.documents.first(where: { document in
-                    let participants = document.data()["participants"] as? [String] ?? []
-                    return participants.contains(otherUserId)
-                }) {
-                    // Open existing conversation
-                    if let conversation = Conversation(from: existingConversation) {
-                        let chatVC = ChatViewController(conversation: conversation)
-                        self.navigationController?.pushViewController(chatVC, animated: true)
-                    }
-                } else {
-                    // Create a new conversation
-                    let conversationData: [String: Any] = [
-                        "participants": [currentUserId, otherUserId],
-                        "created_at": FieldValue.serverTimestamp(),
-                        "last_message": "",
-                        "last_message_timestamp": FieldValue.serverTimestamp()
-                    ]
-                    
-                    db.collection("conversations").addDocument(data: conversationData) { [weak self] error in
-                        if let error = error {
-                            print("Error creating conversation: \(error)")
-                            return
-                        }
-                        
-                        // Fetch the newly created conversation and open chat
-                        if let document = snapshot?.documents.first,
-                           let conversation = Conversation(from: document) {
-                            let chatVC = ChatViewController(conversation: conversation)
-                            self?.navigationController?.pushViewController(chatVC, animated: true)
-                        }
-                    }
-                }
+        // First fetch the other user's information
+        db.collection("users").document(otherUserId).getDocument { [weak self] snapshot, error in
+            guard let self = self,
+                  let userData = snapshot?.data(),
+                  let otherUser = User(from: userData, uid: otherUserId) else {
+                print("Error fetching other user's data")
+                return
             }
+            
+            // Check if a conversation already exists
+            db.collection("conversations")
+                .whereField("participants", arrayContains: currentUserId)
+                .getDocuments { [weak self] snapshot, error in
+                    guard let self = self else { return }
+                    
+                    if let error = error {
+                        print("Error checking existing conversations: \(error)")
+                        return
+                    }
+                    
+                    // Look for an existing conversation with these participants
+                    if let existingConversation = snapshot?.documents.first(where: { document in
+                        let participants = document.data()["participants"] as? [String] ?? []
+                        return participants.contains(otherUserId)
+                    }), var conversation = Conversation(from: existingConversation) {
+                        // Set the other user's information
+                        conversation.otherUserInfo = otherUser
+                        
+                        // Open existing conversation
+                        let chatVC = ChatViewController(conversation: conversation)
+                        chatVC.modalPresentationStyle = .fullScreen
+                        self.present(chatVC, animated: true)
+                    } else {
+                        // Create a new conversation
+                        let conversationData: [String: Any] = [
+                            "participants": [currentUserId, otherUserId],
+                            "created_at": FieldValue.serverTimestamp(),
+                            "last_message": "",
+                            "last_message_timestamp": FieldValue.serverTimestamp()
+                        ]
+                        
+                        db.collection("conversations").addDocument(data: conversationData) { [weak self] error in
+                            if let error = error {
+                                print("Error creating conversation: \(error)")
+                                return
+                            }
+                            
+                            // Fetch the newly created conversation
+                            db.collection("conversations")
+                                .whereField("participants", arrayContains: currentUserId)
+                                .getDocuments { [weak self] snapshot, _ in
+                                    if let document = snapshot?.documents.first(where: { doc in
+                                        let participants = doc.data()["participants"] as? [String] ?? []
+                                        return participants.contains(otherUserId)
+                                    }), var conversation = Conversation(from: document) {
+                                        // Set the other user's information
+                                        conversation.otherUserInfo = otherUser
+                                        
+                                        let chatVC = ChatViewController(conversation: conversation)
+                                        chatVC.modalPresentationStyle = .fullScreen
+                                        self?.present(chatVC, animated: true)
+                                    }
+                                }
+                        }
+                    }
+                }
+        }
     }
     
     @objc private func handleBack() {
